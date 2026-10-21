@@ -3,6 +3,10 @@ import { SoundMeter } from '../adapters/capture/sound-meter';
 import type { CaptureSession } from '../ports/capture';
 import { NativeClient } from './native-client';
 import text from '../../config/browser-ui.json';
+import { visualConfig } from '../../config/visual';
+import { SlideSampler } from './slide-sampler';
+import { fullCrop, validCrop, type Crop } from '../domain/slides';
+import type { CropMode } from '../domain/visual-policy';
 
 const video = document.querySelector('video')!;
 let state = 'idle', error = '', id = '', sourceTitle = '', packets = 0, level = 0, recentAudio = -Infinity;
@@ -11,6 +15,9 @@ let meter: SoundMeter | undefined, listening: AudioContext | undefined;
 let timer: ReturnType<typeof setInterval> | undefined, heartbeatBusy = false;
 let ending: Promise<void> | undefined, pump: Promise<void> | undefined;
 let started = 0, eventIndex = 0;
+let crop: Crop = fullCrop, cropConfirmed = false, cropConfidence = 0;
+let cropMode: CropMode = 'manual';
+let sampler: SlideSampler | undefined;
 const badge = (value: string) => { void chrome.runtime.sendMessage({ target: 'background', op: 'badge', text: value }).catch(() => {}); };
 async function release() {
   clearInterval(timer); timer = undefined;
@@ -38,6 +45,7 @@ async function save() {
       }
     }
     await flushEvents();
+    await sampler?.finish();
     await native!.call('finish', { id, reason: error ? 'capture-error' : (session?.events.at(-1)?.reason ?? 'user-stop') });
     state = error ? 'failed' : 'finished';
   } catch (e) {
@@ -56,7 +64,7 @@ async function stop(reason = 'user-stop') {
 }
 async function preview(streamId: string) {
   if (!['idle', 'finished', 'failed'].includes(state)) throw new Error(text.sourceLocked);
-  state = 'loading'; error = ''; id = ''; packets = 0; recentAudio = -Infinity;
+  state = 'loading'; error = ''; id = ''; packets = 0; recentAudio = -Infinity; sampler = undefined; cropConfirmed = false; cropMode = 'manual';
   try {
     native = new NativeClient(); await native.call('hello');
     native.onDisconnect = () => { error = text.connectFailed; void stop('native-disconnected'); };
@@ -65,9 +73,10 @@ async function preview(streamId: string) {
       // Chrome's tab-stream selector uses legacy constraints. Mixing standard
       // audio fields beside `mandatory` causes Chrome to reject the whole request.
       audio: { mandatory },
-      video: { mandatory: { ...mandatory, maxWidth: 1280, maxHeight: 720, maxFrameRate: 10 } },
+      video: { mandatory: { ...mandatory, maxWidth: visualConfig.captureWidth, maxHeight: visualConfig.captureHeight, maxFrameRate: visualConfig.captureFps } },
     } as unknown as MediaStreamConstraints);
     video.srcObject = stream; await video.play();
+    crop = fullCrop; cropConfidence = 0;
     listening = new AudioContext(); listening.createMediaStreamSource(stream).connect(listening.destination); await listening.resume();
     meter = new SoundMeter(stream); await meter.start();
     stream.getTracks().forEach(track => track.addEventListener('ended', () => { void stop('source-ended'); }, { once: true }));
@@ -76,6 +85,7 @@ async function preview(streamId: string) {
     timer = setInterval(() => {
       level = meter?.level() ?? 0;
       if (level > 0.002) recentAudio = performance.now();
+      if (state === 'recording') sampler?.tick();
       if (++tick % 10 === 0 && !heartbeatBusy && native?.connected && state !== 'stopping') {
         heartbeatBusy = true;
         void native.call('heartbeat').then(reply => { if (reply.stopRequested) void stop('desktop-stop-or-low-disk'); })
@@ -84,31 +94,48 @@ async function preview(streamId: string) {
     }, 100);
   } catch (e) { await release(); state = 'failed'; error = e instanceof Error ? e.message : String(e); throw e; }
 }
-async function command(message: { op: string; streamId?: string; reason?: string; title?: string }) {
+async function command(message: { op: string; streamId?: string; reason?: string; title?: string; crop?: Crop; mode?: CropMode; largePreview?: boolean }) {
   if (message.op === 'status') {
     let image: string | undefined;
     if (stream && video.readyState >= 2) {
-      const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 180;
-      canvas.getContext('2d')!.drawImage(video, 0, 0, 320, 180); image = canvas.toDataURL('image/jpeg', 0.5);
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(1, (message.largePreview ? 1920 : 480) / video.videoWidth);
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height);
+      image = canvas.toDataURL('image/jpeg', message.largePreview ? 0.94 : 0.65);
     }
-    return { state, error, sourceTitle, packets, level, image, elapsedMs: started ? performance.now() - started : 0 };
+    return { state, error, sourceTitle, packets, level, image, crop: sampler?.currentCrop ?? crop, cropMode, visualStatus: sampler?.status, cropConfidence, cropConfirmed, slides: sampler?.saved ?? 0, elapsedMs: started ? performance.now() - started : 0 };
   }
   if (message.op === 'preview') { sourceTitle = message.title ?? text.selected; return preview(message.streamId!); }
+  if (message.op === 'cropMode') {
+    if (state !== 'previewing' || !['auto', 'manual'].includes(message.mode!)) throw new Error(text.invalidCrop);
+    cropMode = message.mode!; cropConfirmed = cropMode === 'auto'; return;
+  }
+  if (message.op === 'crop') {
+    if (state !== 'previewing' || !message.crop || !validCrop(message.crop)) throw new Error(text.invalidCrop);
+    crop = message.crop; cropMode = 'manual'; cropConfirmed = true; return;
+  }
   if (message.op === 'start') {
     if (state !== 'previewing') throw new Error(text.sourceLocked);
     if (performance.now() - recentAudio > 5000) throw new Error(text.noSignal);
     if (video.readyState < 2) throw new Error(text.noVideo);
-    const mime = chooseMimeType();
+    if (!cropConfirmed) throw new Error(text.confirmCrop);
+    const mime = chooseMimeType(true);
     id = (await native!.call('create', { consent: true, mime })).id;
     started = performance.now(); eventIndex = 0;
     try {
-      session = await new BrowserMediaSource(stream!, mime, { now: () => performance.now() - started }).start({ signal: new AbortController().signal, timeoutMs: 15000 });
+      const clock = () => performance.now() - started;
+      sampler = new SlideSampler(video, crop, native!, id, clock, e => { error = String(e); void stop('visual-error'); }, cropMode);
+      const audioStream = new MediaStream(stream!.getAudioTracks());
+      session = await new BrowserMediaSource(audioStream, mime, { now: clock }).start({ signal: new AbortController().signal, timeoutMs: 15000 });
       state = 'recording'; badge('REC'); pump = save();
+      sampler.tick();
     } catch (e) { error = String(e); await release(); state = 'failed'; throw e; }
     return;
   }
   if (message.op === 'pause') {
-    if (state === 'recording') { session!.pause(); state = 'paused'; badge('PAUSE'); }
+    if (state === 'recording') { session!.pause(); state = 'paused'; badge('PAUSE'); await sampler?.pause(); }
     else if (state === 'paused') { session!.resume(); state = 'recording'; badge('REC'); }
     return;
   }

@@ -1,5 +1,11 @@
 # Phase 0 plan and evidence
 
+Automatic-region update: passed 16 domain/replay tests plus seven extension/sampler tests, extension typecheck and full dev/WPF smoke. Covers region hysteresis, manual lock, visual triage and selected-tab-only layout lookup. No live capture was run; semantic lesson relevance and crop accuracy across real layouts remain unverified.
+
+## S2 initial sparse-image slice
+
+Current development mode stores continuous audio plus unique cropped images sampled every five seconds. Automatic geometric crop proposal is confirmed/corrected in the extension before recording. Image envelopes survive host interruption and regenerate a local gallery. Passed 13 domain/replay tests, six extension/sampler tests, two actual C# host tests, typechecks and WPF dev smoke. The owner's supplied screenshot produced the inner PowerPoint slide without chat/toolbars; no real capture was run. Live sparse cadence/minimized audio, varied crop layouts and labelled S2 accuracy remain unverified. Full S2 is not complete; see `docs/visual-spike-plan.md`.
+
 ## Current browser-only direction (2026-10-21)
 
 Owner's first extension test exposed an offscreen API error (`connectNative` unavailable). Corrected the architecture so only the service worker opens the native port, with an offscreen-to-worker relay. Regression tests now reflect the restricted API surface; live Preview retry remains pending.

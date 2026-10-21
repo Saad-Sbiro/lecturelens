@@ -8,10 +8,14 @@ const built = await build({ configFile: false, logLevel: 'silent', build: { writ
 const code = (Array.isArray(built) ? built[0] : built).output.find(item => item.type === 'chunk').code;
 
 test('offscreen orchestration: preview does not persist; recording drains packets before finish and releases tracks', { timeout: 10000 }, async () => {
-  const calls = [], constraints = []; let receiver, nativeReply;
+  const calls = [], constraints = [], draws = []; let receiver, nativeReply;
   const tracks = ['video', 'audio'].map(kind => ({ kind, readyState: 'live', addEventListener() {}, removeEventListener() {}, stop() { this.readyState = 'ended'; } }));
   const stream = { getTracks: () => tracks, getVideoTracks: () => [tracks[0]], getAudioTracks: () => [tracks[1]] };
-  const video = { readyState: 2, srcObject: null, play: async () => {} };
+  const video = { readyState: 2, videoWidth: 320, videoHeight: 180, srcObject: null, play: async () => {} };
+  function makeCanvas() {
+    const canvas = { width: 320, height: 180, toDataURL: () => 'data:image/jpeg;base64,/9j/2Q==', getContext: () => ({ drawImage(...args) { draws.push(args); }, getImageData: () => ({ data: Uint8ClampedArray.from({ length: canvas.width * canvas.height * 4 }, (_, i) => Math.floor(i / 4) % 20 < 10 ? 200 : 40) }) }) };
+    return canvas;
+  }
   class Audio {
     async resume() {} async close() {}
     createMediaStreamSource() { return { connect() {} }; }
@@ -40,7 +44,7 @@ test('offscreen orchestration: preview does not persist; recording drains packet
     }; },
   } };
   vm.runInNewContext(code, {
-    chrome, document: { querySelector: () => video, createElement: () => ({ getContext: () => ({ drawImage() {} }), toDataURL: () => 'data:image/jpeg;base64,AA==' }) },
+    chrome, document: { querySelector: () => video, createElement: makeCanvas },
     navigator: { mediaDevices: { getUserMedia: async value => {
       for (const track of [value.audio, value.video]) {
         if ('mandatory' in track || 'optional' in track) {
@@ -51,6 +55,7 @@ test('offscreen orchestration: preview does not persist; recording drains packet
       constraints.push(value); return stream;
     } } },
     AudioContext: Audio, MediaRecorder: Recorder, Blob, Uint8Array, Float32Array, AbortController,
+    MediaStream: class { constructor(tracks) { this.tracks = tracks; } getTracks() { return this.tracks; } getAudioTracks() { return this.tracks; } getVideoTracks() { return []; } },
     setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask, performance, crypto: webcrypto,
     btoa: value => Buffer.from(value, 'binary').toString('base64'), console,
   });
@@ -61,6 +66,19 @@ test('offscreen orchestration: preview does not persist; recording drains packet
     assert.equal(constraints.length, 1);
     assert.equal(constraints[0].audio.mandatory.chromeMediaSourceId, 'one-tab-only');
     assert.equal(constraints[0].video.mandatory.chromeMediaSourceId, 'one-tab-only');
+    assert.equal(constraints[0].video.mandatory.maxFrameRate, 1);
+    const preview = (await send('status')).value;
+    assert.equal(preview.cropMode, 'manual');
+    assert.equal(preview.cropConfirmed, false);
+    video.videoWidth = 1600; video.videoHeight = 1200;
+    await send('status', { largePreview: true });
+    assert.deepEqual(draws.at(-1).slice(1), [0, 0, 1600, 1200], 'editor preserves source aspect and resolution');
+    await send('status');
+    assert.deepEqual(draws.at(-1).slice(1), [0, 0, 480, 360], 'compact preview also preserves aspect');
+    video.videoWidth = 320; video.videoHeight = 180;
+    await new Promise(resolve => setTimeout(resolve, 150));
+    assert.equal((await send('start')).ok, false, 'manual crop confirmation gates recording');
+    assert.equal((await send('crop', { crop: { x: 0.2, y: 0.2, width: 0.5, height: 0.5 } })).ok, true);
     await new Promise(resolve => setTimeout(resolve, 150));
     assert.equal((await send('start')).ok, true);
     await send('pause'); await send('pause'); await send('stop');
@@ -69,6 +87,9 @@ test('offscreen orchestration: preview does not persist; recording drains packet
     assert.ok(packets.length >= 4);
     packets.forEach((packet, index) => { assert.equal(packet.sequence, index); assert.ok(Buffer.from(packet.data, 'base64').length <= 262144); });
     assert.equal(calls.at(-1).op, 'finish');
+    assert.equal(calls.find(call => call.op === 'create').mime, 'audio/webm;codecs=opus');
+    assert.ok(calls.some(call => call.op === 'slide'));
+    assert.ok(draws.some(args => args.length === 9 && args[1] === 64 && args[2] === 36 && args[3] === 160 && args[4] === 90), 'comparison and saved images use the selected crop');
     assert.deepEqual(calls.filter(call => call.op === 'event').map(call => call.type), ['started', 'paused', 'resumed', 'ended']);
     assert.ok(tracks.every(track => track.readyState === 'ended'));
   } finally { await send('stop'); }

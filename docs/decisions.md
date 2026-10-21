@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10-21 — Automatic region tracking and conservative visual triage
+
+Add automatic/manual crop modes. Automatic mode combines geometric borders with fallback viewport rectangles from video/canvas/SVG elements in the selected tab. Two consistent observations are required before relocating a region; weak or changing geometry preserves full-frame review candidates rather than clipping content silently. Manual mode is never overridden. Source-size changes are logged instead of stopping audio.
+
+`scripting` permission enables a small activeTab-scoped geometry query. It returns normalized rectangles only, no text/URLs/chat, and is invoked only for the selected tab through an offscreen-origin-checked worker message. No broad host permissions, persistent content scripts, new libraries or network services. Lookup is time-bounded so unavailable DOM access cannot stall finalization.
+
+Content triage rejects near-uniform frames, keeps text/diagram-like structure and marks ambiguous content for review. This is not OCR, topic matching or semantic lesson recognition: a structured unrelated page may pass. No model-based claims are made. Uncertain layouts and brief content remain review candidates. Kept/rejected decisions and region changes are logged. Synthetic tests cover manual lock, hysteresis, blank/structured/ambiguous frames and selected-tab-only geometry lookup; real layouts still need owner validation.
+
+## 2026-10-21 — Sparse images plus continuous audio
+
+Replace archived tab video with audio-only Opus/WebM and five-second image candidates. The selected video source is requested at up to 1 fps/1920×1080 for preview/analysis, independent of continuous audio. No new dependencies or paid services. A pure geometric edge detector proposes an inner rectangular crop; explicit confirmation/manual dragging gates recording. Crop comparison uses 160×90 gray frames and 5×5 blocks; tiny cursor noise is ignored. All-kept matching avoids duplicate images on revisits. Stable samples are kept once; brief changes are retained for review, not silently discarded. Images are capped at 720 and 500 kB each; only one pending full image is retained in memory.
+
+C# flushes an atomic image+metadata+SHA-256 envelope before acknowledging; recover/export regenerates JPEGs and a local HTML gallery. Audio uses the existing packet recovery path. Tests cover sparse timing, duplicates/returns, crop bounds, image export after host kill and compatibility with old video sessions. The owner's screenshot independently yielded the inner slide; artefacts remain local/ignored. Live sparse capture, audio continuity under this new mode, varied layouts and labelled detection accuracy still require validation. See `docs/visual-spike-plan.md` for deferred work; geometric confidence is not calibrated semantic confidence.
+
 ## 2026-10-21 — Keep tab acquisition constraints in one syntax
 
 Owner Preview testing reached getUserMedia but Chrome rejected the mixed constraint syntax: the audio request combined legacy `mandatory` tab selectors with standard audio fields. Acquisition now uses only legacy tab constraints, matching the video request. The offscreen mock now rejects mixed syntax instead of accepting it. This fixes request construction; live Preview and audio-isolation checks remain pending.
@@ -73,3 +87,9 @@ MediaRecorder timeslices are fragments of one container, not independently decod
 **Capture configuration:** 1280×720 at a requested 10 fps, 1.5 Mbps video + 96 kbps audio, 2-second encoder timeslices; estimated two-hour payload is 1.4364 GB (actual variable bitrate differs). A 32 MiB queue plus a separately bounded 32 MiB Blob conversion backlog protects memory; a slow disk ends capture with an explicit error. Reserve 256 MiB of free disk beyond the two-hour estimate. Both clocks derive from one session epoch using monotonic `performance` values across renderer/main.
 
 **Limits:** background throttling is disabled, recording uses encoder events rather than UI animation callbacks, and a power-save blocker is active while recording. These are mitigations only. The real 10-minute minimized cadence check remains mandatory. The sound meter is a start gate, not a speech-quality test; any system sound can unlock it, so the owner must verify that the signal belongs to the class. Embedded BBB opens only after an explicit URL action in a separate sandboxed, ephemeral session; no credentials, URLs or class content are committed.
+
+## 2026-10-22 — Manual crop and shared desktop/extension styling
+Owner deferred automatic region detection. Default to unconfirmed manual crop and expose a maximized extension editor with a frozen, aspect-preserving image up to 1920 pixels wide. Only explicit Save changes the crop; the editor cannot start capture or retarget the tab. Keep capture in the existing offscreen document. No new dependencies or cloud services. WPF and extension share dark slate/mint styling and clearer recording controls.
+
+## 2026-10-22 — Original logo and wider popup
+Use the supplied source assets in src/assets unchanged. Embed logomark.png as a WPF resource and let Vite bundle the same file for the extension and crop editor. Gold/amber accents and warm charcoal surfaces replace the mint/slate palette. Set the Chrome popup to 600px with a two-column preview card so recording controls remain reachable. No new dependencies.

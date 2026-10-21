@@ -15,6 +15,16 @@ internal sealed class SessionPanel(FrameworkElement view)
     private bool busy;
     public void Attach()
     {
+        ((Button)view.FindName("ViewSlides")).Click += async (_, _) => await Run(() =>
+        {
+            if (sessions.SelectedItem is SessionInfo selected)
+            {
+                var path = Path.Combine(store.Root, selected.Id, "slides", "index.html");
+                if (File.Exists(path)) Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                else message.Text = (string)view.FindResource("slidesPending");
+            }
+            return Task.CompletedTask;
+        });
         ((Button)view.FindName("Refresh")).Click += async (_, _) => await Run(async () => { sessions.ItemsSource = await Task.Run(store.List); });
         ((Button)view.FindName("Recover")).Click += async (_, _) => await Run(async () =>
         {

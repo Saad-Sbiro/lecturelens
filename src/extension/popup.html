@@ -1,8 +1,10 @@
-<!doctype html><html><head><meta charset="UTF-8"><link rel="stylesheet" href="./popup.css"></head><body>
-<h2>LectureLens</h2><p id="tab"></p><p data-text="privacy"></p>
-<label><input id="consent" type="checkbox"><span data-text="consent"></span></label>
-<img id="image" alt="" hidden><progress id="meter" max="0.2" value="0"></progress><p data-text="signal"></p>
-<button id="preview" data-text="preview"></button><button id="start" data-text="start" disabled></button>
-<button id="pause" data-text="pause" disabled></button><button id="stop" data-text="stop" disabled></button>
-<p id="status" role="status"></p><p id="error" role="alert"></p><small data-text="limitation"></small>
+<!doctype html><html><head><meta charset="UTF-8"><title>LectureLens</title><link rel="stylesheet" href="./popup.css"></head><body>
+<header><span class="logo"><img src="../assets/logomark.png" alt="LectureLens"></span><div><h1>Lecture<span class="brand-accent">Lens</span></h1><small data-text="eyebrow"></small></div><span class="local-dot" title="Local recording"></span></header>
+<section class="source"><span class="eyebrow" data-text="selected"></span><p id="tab"></p><p class="muted" data-text="privacy"></p></section>
+<label class="consent"><input id="consent" type="checkbox"><span data-text="consent"></span></label>
+<button id="preview" class="primary wide" data-text="preview"></button>
+<section class="card"><div class="section-label" data-text="previewLabel"></div><div id="cropStage"><img id="image" alt="" hidden><div id="cropBox" hidden></div></div><button id="openCrop" class="wide" data-text="openCrop" disabled></button><p id="cropStatus" class="muted"></p></section>
+<section class="audio"><span class="eyebrow" data-text="soundLabel"></span><progress id="meter" max="0.2" value="0"></progress><small data-text="signal"></small></section>
+<div class="controls"><button id="start" class="primary" data-text="start" disabled></button><button id="pause" data-text="pauseOnly" disabled></button><button id="stop" class="danger" data-text="stop" disabled></button></div>
+<p id="status" role="status"></p><p id="error" role="alert"></p><footer data-text="limitation"></footer>
 <script type="module" src="./popup.ts"></script></body></html>

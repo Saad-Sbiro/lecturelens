@@ -2,8 +2,8 @@ import { captureConfig } from '../../../config/capture';
 import { ChunkQueue } from '../../domain/chunk-queue';
 import { CapabilityError, type AdapterMetadata, type CaptureOptions, type CaptureSession, type CaptureSource, type Clock } from '../../ports/capture';
 
-export function chooseMimeType(): string {
-  const choices = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus'];
+export function chooseMimeType(audioOnly = false): string {
+  const choices = audioOnly ? ['audio/webm;codecs=opus'] : ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus'];
   const mime = choices.find(type => MediaRecorder.isTypeSupported(type));
   if (!mime) throw new CapabilityError('Unsupported', 'No supported video/audio encoder');
   return mime;
@@ -42,7 +42,7 @@ export class BrowserMediaSource implements CaptureSource {
   constructor(private readonly stream: MediaStream, private readonly mimeType: string, private readonly clock: Clock) {}
   async start(options: CaptureOptions): Promise<CaptureSession> {
     if (options.signal.aborted) throw new CapabilityError('Unavailable', 'Capture cancelled');
-    if (!this.stream.getVideoTracks().some(t => t.readyState === 'live') || !this.stream.getAudioTracks().some(t => t.readyState === 'live')) {
+    if ((!this.mimeType.startsWith('audio/') && !this.stream.getVideoTracks().some(t => t.readyState === 'live')) || !this.stream.getAudioTracks().some(t => t.readyState === 'live')) {
       throw new CapabilityError('Unavailable', 'Both live video and audio are required');
     }
     const recorder = new MediaRecorder(this.stream, {

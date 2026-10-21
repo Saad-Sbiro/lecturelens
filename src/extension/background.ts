@@ -1,5 +1,6 @@
 import text from '../../config/browser-ui.json';
 import { registerNativeRelay } from './native-relay';
+import { presentationRects } from './layout-hints';
 
 registerNativeRelay();
 
@@ -13,13 +14,34 @@ async function offscreen(op: string, data: Record<string, unknown> = {}) {
 let choosing = false;
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id || message.target !== 'background') return;
+  if (message.op === 'layoutHints' && sender.url === chrome.runtime.getURL('offscreen.html')) {
+    void (async () => {
+      const { selectedTab } = await chrome.storage.session.get('selectedTab');
+      if (typeof selectedTab !== 'number' || !Number.isInteger(selectedTab)) return [];
+      const results = await chrome.scripting.executeScript({ target: { tabId: selectedTab }, func: presentationRects });
+      return results[0]?.result ?? [];
+    })().then(respond, () => respond([]));
+    return true;
+  }
   if (message.op === 'badge' && sender.url === chrome.runtime.getURL('offscreen.html')) {
     void chrome.action.setBadgeText({ text: message.text });
     void chrome.action.setBadgeBackgroundColor({ color: '#b91c1c' });
     respond({ ok: true }); return;
   }
-  if (sender.url !== chrome.runtime.getURL('popup.html')) return;
+  const editor = sender.url === chrome.runtime.getURL('crop.html');
+  if (sender.url !== chrome.runtime.getURL('popup.html') && !editor) return;
   void (async () => {
+    if (editor) {
+      if (message.op === 'status') return offscreen('status', { largePreview: true });
+      if (message.op === 'crop') return offscreen('crop', { crop: message.crop });
+      throw new Error('Unsupported operation');
+    }
+    if (message.op === 'openCrop') {
+      const current = await offscreen('status');
+      if (current.value?.state !== 'previewing') throw new Error(text.sourceLocked);
+      await chrome.windows.create({ url: chrome.runtime.getURL('crop.html'), type: 'popup', state: 'maximized' });
+      return { ok: true };
+    }
     if (message.op === 'preview') {
       if (choosing) throw new Error(text.sourceLocked);
       choosing = true;
@@ -35,6 +57,8 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         return await offscreen('preview', { streamId, tabId: tab.id, title: tab.title ?? text.selected });
       } finally { choosing = false; }
     }
+    if (message.op === 'crop') return offscreen('crop', { crop: message.crop });
+    if (message.op === 'cropMode') return offscreen('cropMode', { mode: message.mode });
     if (['status', 'start', 'pause', 'stop'].includes(message.op)) return offscreen(message.op);
     throw new Error('Unsupported operation');
   })().then(respond, error => respond({ ok: false, error: String(error.message ?? error) }));

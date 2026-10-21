@@ -11,7 +11,7 @@
     "smoke:native": "node tools/native.mjs smoke",
     "browser:setup": "node tools/browser-setup.mjs",
     "test:native": "node --test tests/native-host.test.mjs",
-    "test:extension": "node --test tests/extension-policy.test.mjs tests/offscreen.test.mjs tests/native-relay.test.mjs",
+    "test:extension": "node --test tests/extension-policy.test.mjs tests/offscreen.test.mjs tests/native-relay.test.mjs tests/slide-sampler.test.mjs",
     "typecheck:extension": "tsc -p tsconfig.extension.json",
     "package:native": "node tools/native.mjs package",
     "build": "tsc -p tsconfig.main.json && vite build",

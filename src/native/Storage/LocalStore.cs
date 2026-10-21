@@ -5,7 +5,7 @@ using LectureLens.Core;
 
 namespace LectureLens.Storage;
 
-public sealed class LocalStore(string root) : IRecordingStorage, IDisposable
+public sealed partial class LocalStore(string root) : IRecordingStorage, IDisposable
 {
     public static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     public const int MaxPacketBytes = 524288;
@@ -32,7 +32,7 @@ public sealed class LocalStore(string root) : IRecordingStorage, IDisposable
     private static void WriteJson(string file, object value) => Write(file, JsonSerializer.SerializeToUtf8Bytes(value, Json));
     public string Create(string mime)
     {
-        if (mime is not ("video/webm;codecs=vp8,opus" or "video/webm;codecs=vp9,opus" or "video/webm")) throw new InvalidDataException("Unsupported media type");
+        if (mime is not ("audio/webm;codecs=opus" or "video/webm;codecs=vp8,opus" or "video/webm;codecs=vp9,opus" or "video/webm")) throw new InvalidDataException("Unsupported media type");
         if (active != null) throw new InvalidOperationException("A session is already active");
         Directory.CreateDirectory(Root);
         rootLock = new FileStream(Path.Combine(Root, "capture.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -129,7 +129,10 @@ public sealed class LocalStore(string root) : IRecordingStorage, IDisposable
     public string Recover(string id)
     {
         if (IsActive(id)) throw new InvalidOperationException("End recording before recovery");
-        var target = Path.Combine(Folder(id), "recording.webm"); SessionInfo info;
+        ExportSlides(id);
+        using var manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Folder(id), "manifest.json")));
+        var audioOnly = manifest.RootElement.GetProperty("mimeType").GetString()!.StartsWith("audio/");
+        var target = Path.Combine(Folder(id), audioOnly ? "audio.webm" : "recording.webm"); SessionInfo info;
         using (var stream = new FileStream(target + ".partial", FileMode.Create, FileAccess.Write, FileShare.None))
         { info = Scan(id, p => stream.Write(p.Bytes)); stream.Flush(true); }
         if (info.Chunks == 0 || info.Problems.Any(p => p.StartsWith("corrupt-or-gap:"))) throw new InvalidDataException("Recovery incomplete: originals preserved for review");

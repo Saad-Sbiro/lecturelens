@@ -20,7 +20,7 @@ public static class Program
         var source = Environment.GetEnvironmentVariable("LECTURELENS_XAML") ?? Path.Combine(AppContext.BaseDirectory, "MainWindow.xaml");
         using var strings = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "ui-strings.json")));
         foreach (var item in strings.RootElement.EnumerateObject()) app.Resources[item.Name] = item.Value.GetString();
-        var window = new Window { Title = "LectureLens - Native preview", Width = 1000, Height = 740, MinWidth = 740, MinHeight = 600, Background = new SolidColorBrush(Color.FromRgb(17, 24, 39)) };
+        var window = new Window { Title = "LectureLens", Width = 1120, Height = 840, MinWidth = 740, MinHeight = 600, Background = new SolidColorBrush(Color.FromRgb(20, 19, 17)) };
         int reloads = 0;
         void Reload()
         {

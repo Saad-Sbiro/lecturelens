@@ -49,6 +49,12 @@ internal static partial class Program
                         case "event":
                             store.Event(request.GetProperty("id").GetString()!, request.GetProperty("type").GetString()!, request.GetProperty("atMs").GetDouble(), request.GetProperty("reason").GetString()!);
                             value = true; break;
+                        case "slide":
+                            store.SaveSlide(request.GetProperty("id").GetString()!, request.GetProperty("slide").GetInt32(), request.GetProperty("atMs").GetDouble(), request.GetProperty("crop"), request.GetProperty("reason").GetString()!, Convert.FromBase64String(request.GetProperty("data").GetString()!));
+                            value = true; break;
+                        case "visualEvent":
+                            store.VisualEvent(request.GetProperty("id").GetString()!, request.GetProperty("atMs").GetDouble(), request.GetProperty("reason").GetString()!, request.TryGetProperty("slide", out var visualSlide) ? visualSlide.GetInt32() : null, request.GetProperty("crop"));
+                            value = true; break;
                         case "heartbeat": value = new { stopRequested = active != null && (store.StopRequested(active) || store.FreeBytes() < 268435456), elapsedMs = clock.Elapsed.TotalMilliseconds }; break;
                         case "finish":
                             var finished = request.GetProperty("id").GetString()!;

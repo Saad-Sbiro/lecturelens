@@ -38,9 +38,10 @@ test('actual C# host: consent, ordered durable writes, process kill, recovery an
   try {
     assert.equal((await host.call('hello')).version, 1);
     await assert.rejects(host.call('create', { consent: false, mime: 'video/webm' }));
-    const { id } = await host.call('create', { consent: true, mime: 'video/webm' });
+    const { id } = await host.call('create', { consent: true, mime: 'audio/webm;codecs=opus' });
     const data = Buffer.alloc(262144, 42);
     await host.call('append', { id, sequence: 0, atMs: 0, data: data.toString('base64') });
+    await host.call('slide', { id, slide: 0, atMs: 0, crop: { x: 0, y: 0, width: 1, height: 1 }, reason: 'synthetic-crash-test', data: '/9j/2Q==' });
     await assert.rejects(host.call('append', { id, sequence: 0, atMs: 1, data: 'AA==' }));
     await assert.rejects(host.call('recover', { id }));
     const second = client(root);
@@ -48,6 +49,8 @@ test('actual C# host: consent, ordered durable writes, process kill, recovery an
     await host.close(true); host = client(root);
     assert.equal((await host.call('list'))[0].state, 'interrupted');
     const file = await host.call('recover', { id });
+    assert.ok(file.endsWith('audio.webm'));
+    assert.deepEqual(await readFile(join(root, id, 'slides', '00000.jpg')), Buffer.from('/9j/2Q==', 'base64'));
     assert.deepEqual(await readFile(file), data);
     await assert.rejects(host.call('recover', { id: '../outside' }));
     const packet = join(root, id, '00000000.chunk'); const bytes = await readFile(packet); bytes[bytes.length - 1] ^= 1; await writeFile(packet, bytes);
@@ -63,9 +66,13 @@ test('C# host finalizes and exports, rejects sequence gaps and oversized packets
     await assert.rejects(host.call('append', { id, sequence: 2, atMs: 0, data: 'AA==' }));
     await assert.rejects(host.call('append', { id, sequence: 0, atMs: 0, data: Buffer.alloc(524289).toString('base64') }));
     await host.call('append', { id, sequence: 0, atMs: 1, data: 'AQID' });
+    await host.call('slide', { id, slide: 0, atMs: 1, crop: { x: 0, y: 0, width: 1, height: 1 }, reason: 'new-slide:stable', data: '/9j/2Q==' });
+    await host.call('visualEvent', { id, slide: 0, atMs: 1, crop: { x: 0, y: 0, width: 1, height: 1 }, reason: 'new-slide:stable' });
     await host.call('event', { id, type: 'ended', atMs: 2, reason: 'synthetic-test' });
     const result = await host.call('finish', { id, reason: 'user-stop' });
     assert.deepEqual(await readFile(result.path), Buffer.from([1, 2, 3]));
+    assert.deepEqual(await readFile(join(root, id, 'slides', '00000.jpg')), Buffer.from('/9j/2Q==', 'base64'));
+    assert.match(await readFile(join(root, id, 'slides', 'index.html'), 'utf8'), /00000.jpg/);
     assert.equal((await host.call('list'))[0].state, 'finished');
   } finally { await host.close(); await rm(root, { recursive: true, force: true }); }
 });

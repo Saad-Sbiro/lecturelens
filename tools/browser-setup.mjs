@@ -15,7 +15,7 @@ export const extensionId = [...createHash('sha256').update(Buffer.from(key, 'bas
 await build({ configFile: 'vite.extension.config.mjs' });
 writeFileSync('dist/extension/manifest.json', JSON.stringify({
   manifest_version: 3, name: 'LectureLens Tab Capture', version: '0.1.0', minimum_chrome_version: '116', key,
-  permissions: ['activeTab', 'tabCapture', 'offscreen', 'nativeMessaging', 'storage', 'webNavigation'],
+  permissions: ['activeTab', 'tabCapture', 'offscreen', 'nativeMessaging', 'storage', 'webNavigation', 'scripting'],
   background: { service_worker: 'background.js', type: 'module' }, action: { default_popup: 'popup.html' },
   content_security_policy: { extension_pages: "script-src 'self'; object-src 'none'; connect-src 'none'" },
 }, null, 2));

@@ -1,5 +1,15 @@
 # Browser-tab capture spike — owner test
 
+## Current sparse-slide mode
+
+Stop any existing recording, rerun `npm run dev`, and Reload the extension. **Automatic region tracking** is the default: Preview then Start. It checks geometry every sample and requires two matching proposals before relocating the crop. If uncertain it retains full-frame images for review. **Manual crop (locked)** lets you drag a rectangle and Confirm slide crop before Start; automatic detection never overrides it. Manual selection uses normalized coordinates, so re-preview after layout changes if necessary. Automatic tracking continues through frame-size changes without stopping audio.
+
+New checks: record with automatic mode, change the presentation layout and wait at least 10–15 seconds; check that the region moves and uncertain candidates are labelled review. Repeat in manual mode and verify the rectangle stays fixed. Blank screens should not create slides. A structured unrelated page may still be kept: this is visual triage, not semantic lesson recognition. Check that geometry lookup continues to target the lesson when another tab is active. Reloading adds Chrome's scripting capability under the existing activeTab scope; only element rectangles are returned.
+
+New sessions save **audio.webm** (continuous sound, no video) and a **slides/** folder. Candidate images are sampled every 5 seconds from a source requested at up to 1 fps; only distinct crops are persisted. After End & save, choose Refresh, select the session and **View slides** in WPF, or open `slides/index.html`. JPEGs are accompanied by atomic `.slide.json` envelopes and `visual-events.ndjson` logs. Recover / export rebuilds images/gallery and audio from committed data. Old video sessions remain recoverable.
+
+Test at least three slides held for 10+ seconds each, a return to the first slide, chat activity and cursor movement. Check readability and duplicates. Repeat with minimized Chrome and verify actual sampled timestamps; the prior successful video test does not establish timer-based image sampling reliability. Five-second sampling can miss very short slides. Borderless/ambiguous layouts may need manual crop. No transcription or PDF exists yet. The older video-specific steps below describe the previous mode only.
+
 The agent ran offline/mocked tests, not real Chrome capture. Treat tab isolation, real audio, background cadence and BigBlueButton compatibility as unverified until this checklist passes. Use synthetic or consented lesson content, never private tabs for the first test.
 
 ## Start development
@@ -39,3 +49,11 @@ If the extension reports a native connection error: rerun `npm run dev`, verify 
 `npm run typecheck:extension`, `npm run test:extension`, `npm run test:native`, `npm run smoke:native`.
 
 Native tests require `npm run browser:setup` once after changes to the helper. They launch the actual C# helper against temporary synthetic storage. Extension tests use mocked Chrome/media APIs; they do not prove real browser isolation. The existing `npm test` suite still covers the earlier replay/storage contracts.
+
+## Large manual crop editor (2026-10-22)
+- Stop capture, close the old desktop window, run `npm run dev`, then reload the extension.
+- Preview a lesson; Start stays disabled until a crop is saved. Choose slide area opens a maximized separate window with a frozen high-resolution frame.
+- Drag around the slide, resize the editor, and verify the outline stays aligned. Save, reopen the extension, then start.
+- Cancel must leave the previously saved crop unchanged. Refresh image updates the frozen frame. Full frame resets the selection.
+- Test a non-16:9 lesson viewport: neither preview nor saved slide should stretch. Verify saved slide edges, isolated tab audio, pause/resume and end/save.
+- The editor never selects another tab. If the lesson layout changes, end capture and select the new region before restarting.

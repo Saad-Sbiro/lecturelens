@@ -2,6 +2,8 @@
 
 An installable Windows desktop app for browser-based classes. The current default is **native C#/WPF without WebView**, with an experimental Chrome extension for selected-tab picture/audio and durable local storage. Offline checks pass; real Chrome/BigBlueButton isolation still needs the owner's manual test. Zoom/Teams come later. This build does not produce notes or PDFs. The earlier Electron window-capture spike remains available for historical checks but fails the tab-isolation requirement.
 
+Current mode: **continuous audio + cropped unique slide images**. Preview proposes a crop; correct/confirm it before Start. Five-second candidates are compared locally. End & save produces `audio.webm`, JPEGs and a slide gallery; WPF offers View slides. The owner validated isolation/minimization/pause for the earlier video mode; the new sparse mode needs its own manual check. See [current instructions](docs/browser-tab-test.md).
+
 ## Run
 
 Development requires Node.js 24 and the .NET 10 SDK on Windows. The launcher also finds the local SDK in `.tools/dotnet`. No service account, key or credit card.
