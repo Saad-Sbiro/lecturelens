@@ -1,0 +1,75 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import { webcrypto } from 'node:crypto';
+import { build } from 'vite';
+
+const built = await build({ configFile: false, logLevel: 'silent', build: { write: false, minify: false, lib: { entry: 'src/extension/offscreen.ts', name: 'RecordingProbe', formats: ['iife'] } } });
+const code = (Array.isArray(built) ? built[0] : built).output.find(item => item.type === 'chunk').code;
+
+test('offscreen orchestration: preview does not persist; recording drains packets before finish and releases tracks', { timeout: 10000 }, async () => {
+  const calls = [], constraints = []; let receiver, nativeReply;
+  const tracks = ['video', 'audio'].map(kind => ({ kind, readyState: 'live', addEventListener() {}, removeEventListener() {}, stop() { this.readyState = 'ended'; } }));
+  const stream = { getTracks: () => tracks, getVideoTracks: () => [tracks[0]], getAudioTracks: () => [tracks[1]] };
+  const video = { readyState: 2, srcObject: null, play: async () => {} };
+  class Audio {
+    async resume() {} async close() {}
+    createMediaStreamSource() { return { connect() {} }; }
+    createAnalyser() { return { fftSize: 2048, getFloatTimeDomainData(samples) { samples.fill(0.05); } }; }
+  }
+  class Recorder {
+    static isTypeSupported() { return true; }
+    state = 'inactive';
+    start() { this.state = 'recording'; }
+    requestData() { this.ondataavailable?.({ data: new Blob([new Uint8Array(300000).fill(42)]) }); }
+    pause() { this.state = 'paused'; }
+    resume() { this.state = 'recording'; }
+    stop() { this.requestData(); this.state = 'inactive'; queueMicrotask(() => this.onstop?.()); }
+  }
+  const chrome = { runtime: {
+    id: 'test', onMessage: { addListener(fn) { receiver = fn; } }, sendMessage: async () => {},
+    // Deliberately no connectNative: Chrome does not expose it offscreen.
+    connect({ name }) { assert.equal(name, 'lecturelens-native'); return {
+      onMessage: { addListener(fn) { nativeReply = fn; } }, onDisconnect: { addListener() {} }, disconnect() {},
+      postMessage(request) {
+        calls.push(request);
+        const value = request.op === 'create' ? { id: 'synthetic' } : request.op === 'heartbeat' ? { stopRequested: false } : true;
+        // A delayed ACK makes finish ordering observable.
+        setTimeout(() => nativeReply({ requestId: request.requestId, ok: true, value }), 5);
+      },
+    }; },
+  } };
+  vm.runInNewContext(code, {
+    chrome, document: { querySelector: () => video, createElement: () => ({ getContext: () => ({ drawImage() {} }), toDataURL: () => 'data:image/jpeg;base64,AA==' }) },
+    navigator: { mediaDevices: { getUserMedia: async value => {
+      for (const track of [value.audio, value.video]) {
+        if ('mandatory' in track || 'optional' in track) {
+          assert.ok(Object.keys(track).every(key => key === 'mandatory' || key === 'optional'),
+            'Chrome rejects mixing legacy mandatory/optional with standard constraints');
+        }
+      }
+      constraints.push(value); return stream;
+    } } },
+    AudioContext: Audio, MediaRecorder: Recorder, Blob, Uint8Array, Float32Array, AbortController,
+    setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask, performance, crypto: webcrypto,
+    btoa: value => Buffer.from(value, 'binary').toString('base64'), console,
+  });
+  const send = (op, extra = {}) => new Promise(resolve => receiver({ target: 'offscreen', op, ...extra }, { id: 'test' }, resolve));
+  try {
+    assert.equal((await send('preview', { streamId: 'one-tab-only' })).ok, true);
+    assert.equal(calls.some(call => call.op === 'create'), false);
+    assert.equal(constraints.length, 1);
+    assert.equal(constraints[0].audio.mandatory.chromeMediaSourceId, 'one-tab-only');
+    assert.equal(constraints[0].video.mandatory.chromeMediaSourceId, 'one-tab-only');
+    await new Promise(resolve => setTimeout(resolve, 150));
+    assert.equal((await send('start')).ok, true);
+    await send('pause'); await send('pause'); await send('stop');
+    assert.equal((await send('status')).value.state, 'finished');
+    const packets = calls.filter(call => call.op === 'append');
+    assert.ok(packets.length >= 4);
+    packets.forEach((packet, index) => { assert.equal(packet.sequence, index); assert.ok(Buffer.from(packet.data, 'base64').length <= 262144); });
+    assert.equal(calls.at(-1).op, 'finish');
+    assert.deepEqual(calls.filter(call => call.op === 'event').map(call => call.type), ['started', 'paused', 'resumed', 'ended']);
+    assert.ok(tracks.every(track => track.readyState === 'ended'));
+  } finally { await send('stop'); }
+});

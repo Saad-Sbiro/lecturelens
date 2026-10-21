@@ -1,0 +1,45 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Tag="preview" Background="#111827">
+  <Grid.Resources>
+    <Style TargetType="TextBlock">
+      <Setter Property="Foreground" Value="#E5E7EB"/><Setter Property="FontSize" Value="16"/>
+      <Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="0,0,0,14"/>
+    </Style>
+    <Style TargetType="Button">
+      <Setter Property="Padding" Value="18,12"/><Setter Property="FontSize" Value="15"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/><Setter Property="Margin" Value="0,8,0,12"/>
+    </Style>
+  </Grid.Resources>
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="42" MaxWidth="900">
+      <TextBlock Text="{DynamicResource brand}" FontSize="28" FontWeight="Bold" Foreground="#6EE7B7"/>
+      <TextBlock Text="{DynamicResource heading}" FontSize="36" FontWeight="SemiBold"/>
+      <TextBlock Text="{DynamicResource subtitle}" Foreground="#A5B4FC"/>
+      <Border Background="#273348" CornerRadius="10" Padding="24" Margin="0,12,0,24">
+        <StackPanel>
+          <TextBlock Text="{DynamicResource statusTitle}" FontSize="22" FontWeight="SemiBold"/>
+          <TextBlock Text="{DynamicResource statusBody}"/>
+          <Button x:Name="ExtensionFolder" Content="{DynamicResource extensionFolder}"/>
+        </StackPanel>
+      </Border>
+      <TextBlock Text="{DynamicResource nextTitle}" FontSize="22" FontWeight="SemiBold"/>
+      <TextBlock Text="{DynamicResource nextBody}"/>
+      <Button x:Name="OpenFolder" Content="{DynamicResource folder}"/>
+      <TextBlock Text="{DynamicResource sessions}" FontSize="22"/>
+      <DataGrid x:Name="Sessions" Height="180" IsReadOnly="True" AutoGenerateColumns="False" Foreground="Black" SelectionMode="Single">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="{DynamicResource created}" Binding="{Binding CreatedAt}" Width="*"/>
+          <DataGridTextColumn Header="{DynamicResource state}" Binding="{Binding State}" Width="130"/>
+          <DataGridTextColumn Header="{DynamicResource packets}" Binding="{Binding Chunks}" Width="90"/>
+        </DataGrid.Columns>
+      </DataGrid>
+      <WrapPanel>
+        <Button x:Name="Refresh" Content="{DynamicResource refresh}"/>
+        <Button x:Name="Recover" Content="{DynamicResource recover}"/>
+        <Button x:Name="Stop" Content="{DynamicResource stop}"/>
+        <Button x:Name="Delete" Content="{DynamicResource delete}"/>
+      </WrapPanel>
+      <TextBlock x:Name="SessionMessage" Foreground="#FBBF24"/>
+      <TextBlock Text="{DynamicResource scope}" Foreground="#94A3B8" FontSize="14"/>
+    </StackPanel>
+  </ScrollViewer>
+</Grid>

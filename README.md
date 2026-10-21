@@ -1,17 +1,19 @@
 # LectureLens — desktop feasibility lab
 
-An installable Windows desktop app for browser-based classes. Phase 0 currently implements a consent-gated preview, sound check, local recording, pause/resume and recovery tooling. **It does not yet produce study notes or PDFs.** Chrome + BigBlueButton is the owner's first target; real capture validation is pending.
+An installable Windows desktop app for browser-based classes. The current default is **native C#/WPF without WebView**, with an experimental Chrome extension for selected-tab picture/audio and durable local storage. Offline checks pass; real Chrome/BigBlueButton isolation still needs the owner's manual test. Zoom/Teams come later. This build does not produce notes or PDFs. The earlier Electron window-capture spike remains available for historical checks but fails the tab-isolation requirement.
 
 ## Run
 
-Requires Node.js 24 and npm on Windows. No service account, key or credit card.
+Development requires Node.js 24 and the .NET 10 SDK on Windows. The launcher also finds the local SDK in `.tools/dotnet`. No service account, key or credit card.
 
 ```powershell
 npm ci
 npm run dev
 ```
 
-`dev` opens the desktop app, uses Vite for UI live reload, and restarts the shell after shell/storage edits. Keep development edits separate from real recordings. The shipped app uses bundled local assets and needs no localhost server.
+`dev` prepares the Chrome extension and native helper, registers the helper for the current user, opens WPF, and reloads edits to `src/native/Desktop/MainWindow.xaml`. Load `dist/extension` once using Chrome's Load unpacked button. Restart for C# edits and reload the extension after extension edits. See [browser setup and manual tests](docs/browser-tab-test.md). No release build is needed for daily testing. The existing portable EXE is the older interface-only preview and is not refreshed by `dev`.
+
+The following commands and recording behavior refer to the **legacy Electron spike**, not the native preview:
 
 ```powershell
 npm run typecheck

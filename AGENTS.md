@@ -30,12 +30,14 @@ Never claim something works unless you ran it. State what was verified, what was
 
 ## Commands (fill in during Phase 0, then keep current)
 - install: `npm ci`
-- dev (desktop app, live reload): `npm run dev`
+- dev (native WPF, XAML live reload): `npm run dev` (.NET 10 SDK; local `.tools/dotnet` supported)
 - test: `npm test` (offline); shell checks: `npm run smoke` / `npm run smoke:dev`
 - lint/typecheck: `npm run typecheck`
 - replay a fixture: `npm run replay -- fixtures/synthetic-session.json`
 - golden-set eval: `npm run eval` (readiness only until labelled fixtures exist)
-- Windows installer: `npm run package`; disk crash spike: `npm run test:durability`
+- native preview: `npm run package:native` → `release/native-win-x64/LectureLens.exe`; check: `npm run smoke:native`
+- browser spike: `npm run dev` prepares extension/host; load `dist/extension` once in Chrome. Checks: `npm run test:native`, `npm run test:extension`, `npm run typecheck:extension`.
+- legacy Electron installer: `npm run package`; disk crash spike: `npm run test:durability`
 
 ## Layout (fill in after Phase 0 scaffold)
 `docs/` (decisions, providers, manual checklist) · `config/` · `src/domain` · `src/ports` · `src/adapters` · `src/app` · `src/shell` · `fixtures/` · `tools/` · `tests/`

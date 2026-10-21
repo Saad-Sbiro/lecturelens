@@ -1,5 +1,15 @@
 # Phase 0 plan and evidence
 
+## Current browser-only direction (2026-10-21)
+
+Owner's first extension test exposed an offscreen API error (`connectNative` unavailable). Corrected the architecture so only the service worker opens the native port, with an offscreen-to-worker relay. Regression tests now reflect the restricted API surface; live Preview retry remains pending.
+
+The owner chose C#/WPF without WebView and requires isolation of one Chrome tab's picture and sound. `npm run dev` now prepares the MV3 extension plus C# Native Messaging helper, registers it for the current user, and opens WPF. The extension starts with consent/preview/audio gating; recording persists bounded packets and exports WebM after stopping. WPF offers verification, stop requests, recovery and deletion. No release installer was rebuilt for this slice.
+
+Passed: native UI launch/XAML reload, two actual-helper durability/protocol tests, three mocked extension/capture-orchestration tests, extension typecheck, and the existing 11 offline tests. No live capture was run. Chrome/BBB isolation, actual encoded playback, navigation-stop timing and minimized cadence remain owner acceptance checks in [browser-tab-test.md](browser-tab-test.md). The earlier Electron/window and embedded-view plan below is historical, not the current default. S2–S6 are still pending.
+
+## Earlier spike plan
+
 1. Compare Electron, Tauri and .NET MAUI for the owner's Windows machine.
 2. S0: prove a desktop window, UI live reload and an unsigned installer.
 3. S0: provide explicit window selection, preview and a real-signal audio meter.

@@ -1,0 +1,19 @@
+{
+  "title": "LectureLens", "eyebrow": "BROWSER TAB CAPTURE · PHASE 0",
+  "heading": "One lesson tab. Only its picture and sound.",
+  "intro": "Start in the Chrome extension on your class tab. Changing to another tab does not change the selected source.",
+  "local": "Local processing · no cloud upload", "setup": "Connect your browser",
+  "step1": "Load the LectureLens extension in Chrome using the setup guide.",
+  "step2": "Open your BigBlueButton class tab and click the extension icon.",
+  "step3": "Confirm permission, preview, check the sound, then start recording.",
+  "scope": "This prototype captures browser tabs only. Zoom and Teams desktop apps are planned later.",
+  "privacy": "Only this tab's picture and sound are requested. Tab isolation needs manual validation. Navigation inside the selected tab requests a stop, but timing is not guaranteed: do not navigate the recorded tab to private content.",
+  "limitation": "Study notes and PDF generation are not implemented yet. Raw recordings stay local until you delete them.",
+  "sessions": "Local sessions", "empty": "No saved sessions yet.", "refresh": "Refresh", "folder": "Open recordings folder", "free": "Free disk space",
+  "recover": "Recover / export recording", "stop": "End & save", "delete": "Delete raw session", "deleteConfirm": "Permanently delete this session's raw recording?",
+  "exported": "Recording reconstructed in its session folder.", "stopRequested": "Stop requested. Keep Chrome open while the final chunks are saved.",
+  "consent": "I have permission to record this class tab and its audio.", "preview": "Preview selected tab", "start": "Start recording", "pause": "Pause / resume", "close": "Close preview",
+  "selected": "Selected tab", "signal": "Play class speech and check the sound meter before starting.", "idle": "Ready", "previewing": "Preview only · not saved", "recording": "Recording selected tab", "paused": "Paused", "stopping": "Saving final chunks…", "finished": "Saved locally", "failed": "Capture stopped with an error. Saved chunks remain on this device.",
+  "unavailable": "Open a normal HTTPS class tab first.", "connectFailed": "Desktop connection unavailable. Run browser setup and check the native host registration.",
+  "navigation": "Recording ended because the selected tab navigated or closed.", "noSignal": "No recent audio signal. Play class audio before starting.", "noVideo": "No video frames received from the tab.", "consentRequired": "Confirm permission before previewing.", "sourceLocked": "End the current capture before selecting another tab.", "shortcut": "Pause shortcut: Ctrl+Shift+Space", "savedChunks": "Saved packets", "error": "Action failed", "loading": "Connecting…"
+}

@@ -1,0 +1,14 @@
+{
+  "brand": "LectureLens", "heading": "Your lessons, on your device.",
+  "subtitle": "Browser recording spike · local storage · manual validation pending",
+  "statusTitle": "Connect Chrome once, then record from the lesson tab",
+  "statusBody": "Open chrome://extensions, enable Developer mode, click Load unpacked, and select the extension folder below. Open your BigBlueButton tab, click LectureLens, confirm permission, preview and check the audio meter, then Start recording. Reload the extension after source changes. Close all recordings before restarting development.",
+  "extensionFolder": "Open extension folder",
+  "nextTitle": "Keep the selected tab on the lesson",
+  "nextBody": "Switching to other tabs must not change the selected source. Navigation inside the recorded tab requests a stop, but timing still needs testing; do not navigate that tab to private content. Stop from the extension or select the session below and request a stop. Closing this desktop window does not stop Chrome recording.",
+  "folder": "Open local recordings folder",
+  "scope": "Chrome + BigBlueButton first. Real tab/audio isolation remains unverified. No transcription or PDF yet. Raw recordings remain local until you delete them. Zoom and Teams desktop apps come later.",
+  "sessions": "Saved sessions — Refresh to verify packets", "created": "Created", "state": "State", "packets": "Packets",
+  "refresh": "Refresh", "recover": "Recover / export", "stop": "Request stop", "delete": "Delete raw session",
+  "deleteConfirm": "Permanently delete this session and its raw recording?", "stopRequested": "Stop requested. Keep Chrome open while the final chunks are saved, then refresh."
+}

@@ -7,3 +7,6 @@ artifacts/
 !.env.example
 *.log
 fixtures/private/
+.tools/
+**/bin/
+**/obj/
