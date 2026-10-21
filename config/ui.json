@@ -1,0 +1,24 @@
+{
+  "en": {
+    "title": "LectureLens", "eyebrow": "PHASE 0 · DESKTOP LAB",
+    "heading": "Keep the lesson. Find what matters.",
+    "intro": "Test window capture and sound before building the study-notes pipeline.",
+    "local": "On this device · no cloud services",
+    "notice": "Use a dedicated browser window for the class. Changing tabs changes the recorded content. System audio includes other apps and notifications. Preview also accesses the window and sound; it is not saved until you start recording.",
+    "consent": "I have permission to capture this lesson and understand that other system sounds may be included.",
+    "refresh": "List windows", "source": "Class window", "preview": "Preview with sound check",
+    "start": "Start recording", "stop": "End & save", "pause": "Pause / resume", "closePreview": "Close preview",
+    "idle": "Ready — no capture running", "previewing": "Preview only — not saved",
+    "recording": "Recording to this device", "paused": "Paused — new media is not saved",
+    "saved": "Saved locally. PDF generation is not implemented in this spike.",
+    "level": "Sound level", "signal": "Play class audio to unlock recording. A track alone does not prove sound works.",
+    "silent": "No recent sound signal. Check class playback and Windows sound output.",
+    "recover": "Recover saved chunks", "sessions": "Local sessions", "empty": "No saved sessions yet.",
+    "folder": "Open recordings folder", "disk": "Estimated space for two hours / free space",
+    "embedded": "Alternative: embedded class window", "url": "Class URL (HTTPS)", "openEmbedded": "Open isolated class window",
+    "embeddedNotice": "Manual compatibility experiment. Opening this window contacts your platform. Sign-in and isolated sound are unverified. No microphone or webcam access in this spike.",
+    "status": "Status", "privacy": "Raw recordings stay local until you delete them. This spike has no PDF step yet; automatic deletion after a successful PDF belongs to the next slice.",
+    "error": "Action failed", "shortcut": "Pause shortcut: Ctrl+Shift+Space", "sourceChanged": "Window title changed. Check that the class is still selected.",
+    "health": "Capture diagnostics", "delete": "Delete raw session", "deleteConfirm": "Permanently delete this session's raw recording?", "busy": "Working…", "cancel": "Cancel", "chunks": "Saved chunks", "bytes": "Saved MB", "duration": "Elapsed seconds", "exported": "Recording reconstructed in its session folder.", "stopping": "Finishing saved chunks…", "failed": "Recording stopped with an error. Saved chunks remain local; check recovery.", "signalDetected": "Sound signal detected. Confirm that it belongs to the class."
+  }
+}

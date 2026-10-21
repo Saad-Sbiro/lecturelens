@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], "types": ["vite/client"],
+    "strict": true, "skipLibCheck": true, "resolveJsonModule": true,
+    "noEmit": true, "noUnusedLocals": true, "noUnusedParameters": true
+  },
+  "include": ["src/app/**/*.ts", "src/ports/**/*.ts", "src/domain/**/*.ts", "src/adapters/capture/**/*.ts", "config/**/*.ts", "tools/browser-probe.ts"]
+}

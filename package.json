@@ -1,0 +1,37 @@
+{
+  "name": "lecturelens",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Local desktop capture feasibility spikes for LectureLens",
+  "author": "LectureLens",
+  "license": "UNLICENSED",
+  "main": "dist/main/src/shell/main.js",
+  "scripts": {
+    "dev": "node tools/dev.mjs",
+    "build": "tsc -p tsconfig.main.json && vite build",
+    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.ui.json",
+    "test": "tsc -p tsconfig.main.json && node --test dist/main/tests/*.test.js",
+    "test:durability": "node tools/full-disk.mjs",
+    "session:report": "tsc -p tsconfig.main.json && node dist/main/tools/session-report.js",
+    "smoke": "npm run build && node tools/run-electron.mjs tools/smoke.cjs",
+    "smoke:dev": "node tools/dev.mjs --smoke",
+    "package": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "replay": "tsc -p tsconfig.main.json && node dist/main/tools/replay.js",
+    "eval": "tsc -p tsconfig.main.json && node dist/main/tools/eval.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3",
+    "vite": "8.3.5"
+  },
+  "build": {
+    "appId": "local.lecturelens.desktop",
+    "productName": "LectureLens",
+    "directories": { "output": "release" },
+    "files": ["dist/main/src/**/*", "dist/main/config/**/*", "dist/ui/**/*", "package.json"],
+    "win": { "target": "nsis", "signAndEditExecutable": false },
+    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "deleteAppDataOnUninstall": false }
+  }
+}

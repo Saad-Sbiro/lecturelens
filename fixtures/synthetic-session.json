@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "kind": "synthetic-persistence",
+  "description": "Artificial bytes, not playable media. Only proves ordering, timeline and persistence.",
+  "chunks": [
+    { "atMs": 2000, "hex": "4c6563747572654c656e732d3030" },
+    { "atMs": 4000, "hex": "4c6563747572654c656e732d3031" },
+    { "atMs": 12000, "hex": "4c6563747572654c656e732d3032" }
+  ]
+}

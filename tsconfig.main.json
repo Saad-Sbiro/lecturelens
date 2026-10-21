@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "CommonJS", "moduleResolution": "Node",
+    "lib": ["ES2022", "DOM"], "types": ["node"], "strict": true,
+    "esModuleInterop": true, "skipLibCheck": true, "resolveJsonModule": true,
+    "outDir": "dist/main", "rootDir": ".", "noUnusedLocals": true,
+    "noUnusedParameters": true, "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/shell/**/*.ts", "src/ports/**/*.ts", "src/domain/**/*.ts", "src/adapters/storage/**/*.ts", "src/adapters/replay/**/*.ts", "tests/**/*.ts", "tools/**/*.ts", "config/**/*.ts"],
+  "exclude": ["tools/browser-probe.ts"]
+}
