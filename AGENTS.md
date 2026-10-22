@@ -13,6 +13,7 @@ An installable **desktop app** (a mobile app comes later; not a hosted website).
 5. **Never lose a recording:** persist incrementally and support recovery.
 6. **Explainable:** every kept/rejected frame and segment gets a logged reason.
 7. **Fast dev loop:** `dev` must open the desktop app with live reload for UI changes. Slow-to-reload parts are covered by the replay harness.
+8. UI work must follow DESIGN_BRIEF.md (premium, original, alive; never at the cost of capture reliability).
 
 ## Workflow
 - Start each phase with a plan of 15 lines or fewer (tasks plus acceptance checks), then proceed. Ask the owner only about items in `PROJECT_BRIEF.md` §12.

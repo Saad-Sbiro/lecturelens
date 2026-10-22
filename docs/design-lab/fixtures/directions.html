@@ -1,0 +1,306 @@
+<div id="ll-design-lab" lang="ar">
+  <!-- Local synthetic UI fixtures. No recording, media permission or service calls. -->
+  <style>
+    /* FONT_FACES */
+    #ll-design-lab { --ll-font: 'LL Plex', sans-serif; --ll-space: 8px; --ll-small: 12px; --ll-body: 15px; --ll-caption: 13px; --ll-title: 32px; --ll-display: 48px; --ll-line: 1.65; --ll-fast: 150ms; --ll-slow: 300ms; --ll-ease: cubic-bezier(.2,.8,.2,1); --ll-radius: 18px; --ll-rail: 76px; font-family: var(--ll-font); }
+    #ll-design-lab * { box-sizing: border-box; }
+    #ll-design-lab [hidden] { display: none !important; }
+    #ll-design-lab .ll-app { color-scheme: light dark; --bg: light-dark(#eff4f1,#101a1c); --surface: light-dark(#ffffff,#172527); --raised: light-dark(#e7efeb,#203234); --ink: light-dark(#17352f,#eef6f0); --muted: light-dark(#4e6861,#a2b8b0); --accent: light-dark(#17604b,#b8efce); --accent-ink: light-dark(#ffffff,#17362c); --line: light-dark(#ceddd5,#304644); --wash: light-dark(#daeadf,#273f35); --danger: light-dark(#a42d39,#ffadb5); --paper: #faf9f3; --paper-ink: #193b39; --paper-muted: #546962; --paper-line: #d9dfd8; --slide-bg: #eef3ed; --slide-accent: #2c6d5a; --shadow: 0 16px 36px #00000012; --glow: light-dark(#dcece0,#233b32); background: var(--bg); color: var(--ink); font-size: var(--ll-body); line-height: var(--ll-line); min-height: 812px; border: 1px solid var(--line); border-radius: var(--ll-radius); overflow: clip; }
+    #ll-design-lab .ll-app[data-direction="paper"] { --bg: light-dark(#f4f0e7,#251e1b); --surface: light-dark(#fcfaf5,#302723); --raised: light-dark(#eae3d5,#3b3029); --ink: light-dark(#382d26,#f9edda); --muted: light-dark(#72614e,#c1ad97); --accent: light-dark(#99472e,#edb08d); --accent-ink: light-dark(#fff9f1,#442617); --line: light-dark(#dcd1bf,#53443a); --wash: light-dark(#eee0cd,#493629); --glow: light-dark(#e8dec8,#46352a); --ll-radius: 8px; --ll-title: 40px; }
+    #ll-design-lab .ll-app[data-direction="prism"] { --bg: light-dark(#eef0fb,#171a31); --surface: light-dark(#fafbff,#21253f); --raised: light-dark(#e0e4f5,#2c3153); --ink: light-dark(#202845,#f0f2ff); --muted: light-dark(#5e6482,#aeb5d8); --accent: light-dark(#4946b8,#c1bcff); --accent-ink: light-dark(#ffffff,#2b235e); --line: light-dark(#cdd2e8,#3b4266); --wash: light-dark(#dfddf8,#39345b); --glow: light-dark(#deddf6,#353152); --ll-radius: 24px; --ll-title: 30px; }
+    #ll-design-lab .ll-chrome { height: 44px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding-inline: 20px 0; direction: ltr; font-size: 12px; }
+    #ll-design-lab .ll-brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: -.3px; }
+    #ll-design-lab .ll-mark { display: inline-block; width: 23px; height: 23px; position: relative; border: 2px solid var(--accent); border-radius: 8px 3px 8px 3px; transform: rotate(-9deg); }
+    #ll-design-lab .ll-mark::after { content: ''; position: absolute; inset: 5px; background: var(--accent); border-radius: 50%; }
+    #ll-design-lab .ll-caption { color: var(--muted); font-size: var(--ll-caption); }
+    #ll-design-lab .ll-window-controls { display: flex; align-items: center; height: 100%; gap: 27px; padding: 0 20px; color: var(--muted); font-family: sans-serif; }
+    #ll-design-lab .ll-layout { display: grid; grid-template-columns: var(--ll-rail) minmax(0,1fr); }
+    #ll-design-lab .ll-rail { border-inline-end: 1px solid var(--line); padding: 28px 12px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+    #ll-design-lab .ll-rail-item { display: grid; place-items: center; gap: 7px; font-size: 11px; color: var(--muted); }
+    #ll-design-lab .ll-rail-item.active { color: var(--accent); }
+    #ll-design-lab .ll-rail-symbol { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 13px; background: var(--raised); font-size: 21px; line-height: 1; }
+    #ll-design-lab .ll-rail-item.active .ll-rail-symbol { background: var(--wash); }
+    #ll-design-lab .ll-rail-bottom { margin-top: auto; }
+    #ll-design-lab .ll-content { padding: 25px 32px 22px; min-width: 0; }
+    #ll-design-lab .ll-topline, #ll-design-lab .ll-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    #ll-design-lab .ll-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--raised); }
+    #ll-design-lab button { font: inherit; color: inherit; }
+    #ll-design-lab .ll-tab { padding: 6px 16px; background: transparent; border: 0; border-radius: 7px; color: var(--muted); font-size: var(--ll-caption); }
+    #ll-design-lab .ll-tab[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 2px 4px #00000008; }
+    #ll-design-lab .ll-eyebrow { font-size: var(--ll-caption); color: var(--muted); }
+    #ll-design-lab h1, #ll-design-lab h2, #ll-design-lab h3, #ll-design-lab p { margin: 0; }
+    #ll-design-lab h1 { font-size: var(--ll-title); line-height: 1.35; font-weight: 500; letter-spacing: -.7px; }
+    #ll-design-lab h2 { font-size: 20px; line-height: 1.5; font-weight: 500; }
+    #ll-design-lab h3 { font-size: 16px; font-weight: 500; }
+    #ll-design-lab .ll-heading { margin-block: 23px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    #ll-design-lab .ll-subtitle { color: var(--muted); margin-top: 6px; font-size: 14px; }
+    #ll-design-lab .ll-status { color: var(--accent); display: inline-flex; align-items: center; gap: 8px; font-size: 13px; white-space: nowrap; }
+    #ll-design-lab .ll-dot { display: inline-block; width: 7px; height: 7px; background: currentColor; border-radius: 50%; }
+    #ll-design-lab .ll-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--wash); color: var(--accent); border-radius: 30px; padding: 5px 12px; font-size: 12px; }
+    #ll-design-lab .ll-button { display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 44px; padding: 10px 20px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); font-weight: 500; font-size: 14px; transition: background var(--ll-fast) var(--ll-ease); }
+    #ll-design-lab .ll-button:hover { background: var(--raised); }
+    #ll-design-lab .ll-button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+    #ll-design-lab .ll-button.primary:hover { filter: brightness(.95); }
+    #ll-design-lab .ll-button.quiet { background: transparent; }
+    #ll-design-lab .ll-button:focus-visible, #ll-design-lab .ll-tab:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    #ll-design-lab .ll-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    #ll-design-lab .ll-action-symbol { font-family: sans-serif; font-size: 13px; }
+    #ll-design-lab .ll-orbit-record { display: grid; grid-template-columns: minmax(0,1fr) 292px; gap: 22px; }
+    #ll-design-lab .ll-slide-panel { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 12px; min-width: 0; }
+    #ll-design-lab .ll-slide-top { padding: 1px 4px 10px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); }
+    #ll-design-lab .ll-slide { background: var(--slide-bg); color: var(--paper-ink); border-radius: 8px; min-height: 268px; padding: 27px 29px 18px; text-align: start; direction: ltr; position: relative; overflow: hidden; }
+    #ll-design-lab .ll-slide-kicker { font-size: 10px; letter-spacing: 2px; color: var(--paper-muted); font-weight: 600; }
+    #ll-design-lab .ll-slide h2 { font-size: 24px; font-weight: 500; margin-top: 9px; letter-spacing: -.7px; line-height: 1.2; }
+    #ll-design-lab .ll-slide-copy { font-size: 12px; max-width: 240px; margin-top: 8px; color: var(--paper-muted); }
+    #ll-design-lab .ll-slide-art { display: grid; grid-template-columns: 1fr 1.1fr; gap: 14px; align-items: center; margin-top: 16px; }
+    #ll-design-lab .ll-slide-formula { font-size: 31px; letter-spacing: -1px; font-weight: 500; }
+    #ll-design-lab .ll-slide-formula small { display: block; font-size: 11px; letter-spacing: 0; color: var(--paper-muted); margin-top: 8px; }
+    #ll-design-lab .ll-graph { width: 100%; height: 115px; color: var(--slide-accent); }
+    #ll-design-lab .ll-slide-foot { display: flex; justify-content: space-between; margin-top: 12px; color: var(--paper-muted); font-size: 10px; }
+    #ll-design-lab .ll-slide-note { margin: 11px 4px 0; display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+    #ll-design-lab .ll-signal { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; border-radius: 18px; background: radial-gradient(ellipse at 50% 36%,var(--glow),var(--bg) 70%); padding: 10px 0; }
+    #ll-design-lab .ll-orb { position: relative; width: 214px; height: 214px; display: grid; align-content: center; justify-items: center; gap: 3px; border: 1px solid var(--line); border-radius: 50%; background: var(--bg); box-shadow: 0 0 0 12px color-mix(in srgb,var(--accent) 3%,transparent),0 0 0 25px color-mix(in srgb,var(--accent) 2%,transparent); }
+    #ll-design-lab .ll-orb::before { content: ''; position: absolute; inset: -5px; border: 3px solid var(--accent); border-bottom-color: transparent; border-inline-start-color: transparent; border-radius: 50%; transform: rotate(-38deg); opacity: .75; }
+    #ll-design-lab .ll-time { font-size: 43px; font-weight: 400; direction: ltr; font-variant-numeric: tabular-nums; line-height: 1.4; letter-spacing: -2px; }
+    #ll-design-lab .ll-wave { display: flex; align-items: center; justify-content: center; gap: 4px; direction: ltr; height: 28px; }
+    #ll-design-lab .ll-wave span { display: block; width: 3px; height: var(--level); border-radius: 4px; background: var(--accent); opacity: .85; }
+    #ll-design-lab .ll-signal .ll-actions { justify-content: center; margin-top: 10px; }
+    #ll-design-lab .ll-signal .ll-button { padding-inline: 14px; font-size: 13px; }
+    #ll-design-lab .ll-filmstrip { margin-top: 21px; }
+    #ll-design-lab .ll-section-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; }
+    #ll-design-lab .ll-thumbs { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; }
+    #ll-design-lab .ll-thumb { min-width: 0; }
+    #ll-design-lab .ll-thumb-art { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; height: 76px; padding: 12px 13px; position: relative; direction: ltr; color: var(--muted); }
+    #ll-design-lab .ll-thumb-art.active { border-color: var(--accent); background: var(--wash); color: var(--accent); }
+    #ll-design-lab .ll-thumb-title { font-size: 10px; white-space: nowrap; }
+    #ll-design-lab .ll-thumb-rule { height: 3px; border-radius: 2px; width: 65%; background: currentColor; opacity: .22; margin-top: 7px; }
+    #ll-design-lab .ll-thumb-rule.short { width: 44%; }
+    #ll-design-lab .ll-thumb-number { position: absolute; inset-inline-end: 10px; bottom: 8px; font-size: 10px; opacity: .65; }
+    #ll-design-lab .ll-thumb-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+    #ll-design-lab .ll-footer { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-top: 20px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    #ll-design-lab .ll-orbit-result { display: grid; grid-template-columns: .8fr 1.2fr; gap: 38px; margin-top: 24px; align-items: center; }
+    #ll-design-lab .ll-result-intro { padding: 16px 0 16px 15px; }
+    #ll-design-lab .ll-result-intro h1 { font-size: 38px; line-height: 1.4; margin-block: 14px 8px; }
+    #ll-design-lab .ll-result-intro .ll-subtitle { max-width: 310px; }
+    #ll-design-lab .ll-summary { display: flex; gap: 24px; margin-block: 24px; padding-block: 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    #ll-design-lab .ll-stat strong { display: block; font-size: 28px; font-weight: 500; line-height: 1.3; }
+    #ll-design-lab .ll-stat span { color: var(--muted); font-size: 12px; }
+    #ll-design-lab .ll-settings { display: grid; gap: 9px; font-size: 13px; margin-bottom: 23px; }
+    #ll-design-lab .ll-settings>div { display: flex; justify-content: space-between; gap: 12px; }
+    #ll-design-lab .ll-settings span { color: var(--muted); }
+    #ll-design-lab .ll-preview { background: var(--raised); border-radius: 18px; padding: 20px 26px 17px; position: relative; }
+    #ll-design-lab .ll-page { background: var(--paper); color: var(--paper-ink); min-height: 470px; padding: 24px 30px 18px; border-radius: 3px; box-shadow: var(--shadow); position: relative; font-family: 'LL Plex', sans-serif; }
+    #ll-design-lab .ll-page-header { display: flex; justify-content: space-between; color: var(--paper-muted); font-size: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--paper-line); }
+    #ll-design-lab .ll-page h2 { font-size: 26px; margin-block: 14px 5px; font-family: 'LL Naskh',serif; }
+    #ll-design-lab .ll-page-sub { font-size: 11px; color: var(--paper-muted); }
+    #ll-design-lab .ll-page .ll-slide { min-height: 0; padding: 12px 16px 10px; border: 1px solid var(--paper-line); margin-top: 16px; }
+    #ll-design-lab .ll-page .ll-slide h2 { font-family: 'LL Plex',sans-serif; font-size: 17px; margin-top: 5px; }
+    #ll-design-lab .ll-page .ll-slide-kicker { font-size: 8px; }
+    #ll-design-lab .ll-page .ll-slide-copy { display: none; }
+    #ll-design-lab .ll-page .ll-slide-art { margin-top: 9px; }
+    #ll-design-lab .ll-page .ll-slide-formula { font-size: 24px; }
+    #ll-design-lab .ll-page .ll-slide-formula small { font-size: 9px; }
+    #ll-design-lab .ll-page .ll-graph { height: 72px; }
+    #ll-design-lab .ll-page .ll-slide-foot { display: none; }
+    #ll-design-lab .ll-page h3 { font-size: 14px; margin-block: 15px 4px; }
+    #ll-design-lab .ll-page p { font-size: 12px; line-height: 1.8; }
+    #ll-design-lab .ll-note-callout { margin-top: 13px; border-inline-start: 3px solid var(--slide-accent); padding: 7px 12px; background: var(--slide-bg); font-size: 11px; }
+    #ll-design-lab .ll-page-footer { display: flex; justify-content: space-between; font-size: 9px; margin-top: 18px; padding-top: 9px; border-top: 1px solid var(--paper-line); color: var(--paper-muted); }
+    #ll-design-lab .ll-pager { display: flex; justify-content: center; gap: 20px; margin-top: 13px; color: var(--muted); font-size: 12px; }
+    #ll-design-lab .ll-save-note { font-size: 12px; color: var(--muted); margin-top: 12px; }
+    #ll-design-lab .ll-paper-content { padding: 24px 45px 20px; }
+    #ll-design-lab [data-direction="paper"] h1 { font-family: 'LL Naskh',serif; font-weight: 500; }
+    #ll-design-lab .ll-paper-nav { padding-bottom: 17px; border-bottom: 1px solid var(--line); }
+    #ll-design-lab .ll-paper-record { display: grid; grid-template-columns: 280px minmax(0,1fr); gap: 48px; align-items: center; margin-top: 25px; }
+    #ll-design-lab .ll-paper-record h1 { font-size: 50px; line-height: 1.28; margin-block: 15px 10px; }
+    #ll-design-lab .ll-paper-timer { margin-top: 25px; border-block: 1px solid var(--line); padding-block: 14px; }
+    #ll-design-lab .ll-paper-timer .ll-time { font-size: 49px; }
+    #ll-design-lab .ll-paper-record .ll-actions { margin-top: 22px; }
+    #ll-design-lab .ll-paper-record .ll-actions .primary { width: 100%; }
+    #ll-design-lab .ll-paper-record .ll-actions .quiet { width: 100%; }
+    #ll-design-lab .ll-paper-sheet { background: var(--surface); border: 1px solid var(--line); padding: 18px; box-shadow: 6px 7px 0 var(--raised); border-radius: 3px; }
+    #ll-design-lab .ll-paper-sheet .ll-slide { min-height: 304px; border-radius: 0; padding: 29px; }
+    #ll-design-lab .ll-paper-sheet .ll-slide h2 { font-size: 28px; }
+    #ll-design-lab .ll-paper-sheet .ll-graph { height: 135px; }
+    #ll-design-lab .ll-paper-sheet-caption { padding: 13px 4px 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 12px; color: var(--muted); }
+    #ll-design-lab .ll-paper-film { margin-top: 31px; border-top: 1px solid var(--line); padding-top: 15px; }
+    #ll-design-lab .ll-paper-film .ll-thumb-art { border-radius: 2px; height: 64px; }
+    #ll-design-lab .ll-paper-result { display: grid; grid-template-columns: minmax(0,1fr) 285px; gap: 45px; margin-top: 25px; align-items: start; }
+    #ll-design-lab .ll-paper-result .ll-preview { background: transparent; padding: 0 16px; }
+    #ll-design-lab .ll-paper-result .ll-page { min-height: 500px; box-shadow: 6px 7px 0 var(--raised),var(--shadow); }
+    #ll-design-lab .ll-paper-result .ll-result-intro { padding: 0; }
+    #ll-design-lab .ll-paper-result .ll-result-intro h1 { font-size: 40px; margin-top: 10px; }
+    #ll-design-lab .ll-chapters { margin-top: 20px; border-top: 1px solid var(--line); }
+    #ll-design-lab .ll-chapter { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    #ll-design-lab .ll-chapter span { color: var(--muted); font-size: 11px; }
+    #ll-design-lab .ll-prism-content { padding: 22px 32px; }
+    #ll-design-lab [data-direction="prism"] h1, #ll-design-lab [data-direction="prism"] h2:not(.ll-slide h2) { font-family: 'LL Alexandria',sans-serif; }
+    #ll-design-lab .ll-prism-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    #ll-design-lab .ll-prism-record { display: grid; grid-template-columns: 260px minmax(0,1fr); gap: 20px; margin-top: 22px; }
+    #ll-design-lab .ll-beacon { background: var(--accent); color: var(--accent-ink); border-radius: 22px; padding: 26px 24px 20px; display: flex; flex-direction: column; min-height: 365px; }
+    #ll-design-lab .ll-beacon h2 { font-size: 20px; }
+    #ll-design-lab .ll-beacon .ll-status, #ll-design-lab .ll-beacon .ll-caption { color: inherit; opacity: .8; }
+    #ll-design-lab .ll-beacon .ll-time { font-size: 44px; margin-block: 16px 4px; }
+    #ll-design-lab .ll-beacon .ll-wave { height: 65px; margin-block: 16px; gap: 5px; }
+    #ll-design-lab .ll-beacon .ll-wave span { background: currentColor; width: 5px; height: calc(var(--level) * 2.1); }
+    #ll-design-lab .ll-beacon-bottom { margin-top: auto; border-top: 1px solid currentColor; padding-top: 13px; display: flex; justify-content: space-between; font-size: 12px; }
+    #ll-design-lab .ll-prism-main { min-width: 0; }
+    #ll-design-lab .ll-prism-main .ll-slide-panel { padding: 14px; border-radius: 22px; }
+    #ll-design-lab .ll-prism-main .ll-slide { min-height: 282px; }
+    #ll-design-lab .ll-prism-controls { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 18px; }
+    #ll-design-lab .ll-prism-timeline { margin-top: 25px; border-top: 1px solid var(--line); padding-top: 16px; }
+    #ll-design-lab .ll-ribbon { display: flex; align-items: center; gap: 4px; height: 33px; direction: ltr; margin: 12px 0 7px; }
+    #ll-design-lab .ll-ribbon span { background: var(--accent); flex: 1; height: var(--ribbon-level); opacity: .35; border-radius: 2px; }
+    #ll-design-lab .ll-ribbon span.marker { opacity: .9; height: 28px; }
+    #ll-design-lab .ll-ribbon-labels { display: flex; justify-content: space-between; direction: ltr; color: var(--muted); font-size: 11px; }
+    #ll-design-lab .ll-prism-result { margin-top: 23px; }
+    #ll-design-lab .ll-prism-result-top { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 23px; }
+    #ll-design-lab .ll-prism-result-top h1 { margin-block: 7px; font-size: 32px; }
+    #ll-design-lab .ll-prism-result-body { display: grid; grid-template-columns: 250px minmax(0,1fr); gap: 23px; align-items: start; }
+    #ll-design-lab .ll-prism-index { padding: 21px; background: var(--surface); border-radius: 20px; }
+    #ll-design-lab .ll-prism-index .ll-summary { gap: 21px; margin-block: 16px; }
+    #ll-design-lab .ll-prism-index .ll-stat strong { font-size: 24px; }
+    #ll-design-lab .ll-prism-result-body .ll-preview { padding: 16px 30px; border-radius: 20px; }
+    #ll-design-lab .ll-prism-result-body .ll-page { min-height: 430px; padding: 19px 28px 15px; }
+    #ll-design-lab .ll-prism-result-body .ll-page .ll-slide-art { grid-template-columns: 1fr 1fr; }
+    #ll-design-lab .ll-notice { margin-top: 10px; color: var(--accent); font-size: 13px; min-height: 22px; }
+    #ll-design-lab .ll-app[data-paused="true"] .ll-wave span { height: 3px; opacity: .35; }
+    #ll-design-lab .ll-app[data-paused="true"] .ll-orb::before { opacity: .18; }
+    @media (prefers-reduced-motion: reduce) { #ll-design-lab * { transition: none !important; } }
+    @media (max-width: 900px) {
+      #ll-design-lab .ll-content { padding-inline: 23px; }
+      #ll-design-lab .ll-orbit-record { grid-template-columns: minmax(0,1fr) 240px; gap: 14px; }
+      #ll-design-lab .ll-orb { width: 180px; height: 180px; }
+      #ll-design-lab .ll-time { font-size: 37px; }
+      #ll-design-lab .ll-slide { padding-inline: 20px; }
+      #ll-design-lab .ll-paper-content { padding-inline: 28px; }
+      #ll-design-lab .ll-paper-record { grid-template-columns: 235px minmax(0,1fr); gap: 30px; }
+      #ll-design-lab .ll-prism-record { grid-template-columns: 220px minmax(0,1fr); }
+      #ll-design-lab .ll-prism-result-body { grid-template-columns: 220px minmax(0,1fr); }
+      #ll-design-lab .ll-slide h2 { font-size: 21px; }
+      #ll-design-lab .ll-orbit-result { gap: 22px; }
+      #ll-design-lab .ll-preview { padding-inline: 17px; }
+      #ll-design-lab .ll-page { padding-inline: 22px; }
+    }
+    @media (max-width: 680px) {
+      #ll-design-lab .ll-app { min-height: 0; }
+      #ll-design-lab .ll-chrome { padding-inline: 12px 0; }
+      #ll-design-lab .ll-chrome>.ll-caption { font-size: 10px; }
+      #ll-design-lab .ll-window-controls { display: none; }
+      #ll-design-lab .ll-layout { grid-template-columns: minmax(0,1fr); }
+      #ll-design-lab .ll-rail { display: none; }
+      #ll-design-lab .ll-content, #ll-design-lab .ll-paper-content, #ll-design-lab .ll-prism-content { padding: 20px 16px; }
+      #ll-design-lab .ll-topline, #ll-design-lab .ll-paper-nav, #ll-design-lab .ll-prism-header { flex-wrap: wrap; }
+      #ll-design-lab .ll-heading { flex-wrap: wrap; margin-block: 20px; }
+      #ll-design-lab h1 { font-size: 28px; }
+      #ll-design-lab .ll-orbit-record, #ll-design-lab .ll-orbit-result, #ll-design-lab .ll-paper-record, #ll-design-lab .ll-paper-result, #ll-design-lab .ll-prism-record, #ll-design-lab .ll-prism-result-body { grid-template-columns: minmax(0,1fr); gap: 22px; }
+      #ll-design-lab .ll-signal { padding-block: 23px; }
+      #ll-design-lab .ll-thumbs { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+      #ll-design-lab .ll-thumb-art { padding: 9px; }
+      #ll-design-lab .ll-thumb-title { font-size: 8px; }
+      #ll-design-lab .ll-paper-record h1 { font-size: 39px; }
+      #ll-design-lab .ll-paper-record .ll-actions .ll-button { width: auto; }
+      #ll-design-lab .ll-prism-controls, #ll-design-lab .ll-prism-result-top { flex-wrap: wrap; }
+      #ll-design-lab .ll-prism-result-top h1 { font-size: 27px; }
+      #ll-design-lab .ll-beacon { min-height: 290px; }
+      #ll-design-lab .ll-prism-result-body .ll-preview, #ll-design-lab .ll-paper-result .ll-preview { padding: 12px; }
+      #ll-design-lab .ll-page { padding-inline: 18px; }
+      #ll-design-lab .ll-paper-sheet { padding: 12px; }
+      #ll-design-lab .ll-paper-sheet .ll-slide { padding-inline: 17px; }
+      #ll-design-lab .ll-slide-art { gap: 8px; }
+      #ll-design-lab .ll-slide-formula { font-size: 27px; }
+      #ll-design-lab .ll-result-intro { padding: 0; }
+      #ll-design-lab .ll-summary { gap: 22px; }
+    }
+  </style>
+  <div class="viz-carousel" aria-label="اتجاهات LectureLens" data-previous-label="السابق" data-next-label="التالي">
+    <section data-variant="مدار" aria-label="مدار"><div class="ll-app" data-direction="orbit" aria-label="مدار"></div></section>
+    <section data-variant="ورق" aria-label="ورق" hidden><div class="ll-app" data-direction="paper" aria-label="ورق"></div></section>
+    <section data-variant="طيف" aria-label="طيف" hidden><div class="ll-app" data-direction="prism" aria-label="طيف"></div></section>
+  </div>
+  <script>
+  (() => {
+    const root = document.getElementById('ll-design-lab');
+    // All copy and lecture data here are synthetic test fixtures, not application resources.
+    const copy = {
+      ar: { dir:'rtl', name:'العربية', sample:'نموذج بصري · بيانات تجريبية', recording:'التسجيل', result:'النتيجة', lesson:'الفيزياء · الدرس الرابع', topic:'الطاقة والحركة', focus:'ركّز على الدرس.', reassurance:'نحفظ الصوت والشرائح، وأنت تابع الشرح.', active:'التسجيل مستمر', paused:'التسجيل متوقف مؤقتًا', recordingTime:'مدة التسجيل', current:'الشريحة الحالية', sound:'صوت الدرس', signal:'الصوت واضح', pause:'إيقاف مؤقت', resume:'متابعة التسجيل', end:'إنهاء التسجيل', slides:'الشرائح المحفوظة', slideCount:'12 شريحة', captured:'حُفظت عند 28:14 · تغيّر محتوى الشريحة', safe:'محفوظ على هذا الجهاز', lastSave:'آخر حفظ: منذ ثانيتين', source:'المصدر: تبويب المتصفح', lang:'الدرس: الفرنسية · الملخص: العربية', ready:'ملخصك جاهز.', readySub:'أهم الأفكار مع صور الشرائح، مرتبة وجاهزة للمراجعة.', readyBadge:'اكتمل الملخص', pages:'صفحات', minute:'دقيقة', slideUnit:'شريحة', pdfLang:'لغة الملخص', arabic:'العربية', notesStyle:'طريقة العرض', notesStyleValue:'شرح مختصر مع الشرائح', export:'حفظ PDF', review:'مراجعة الملخص', privacy:'حذف التسجيل الخام بعد حفظ الملف', preview:'معاينة الملخص', pager:'صفحة 1 من 8', library:'دروسي', settings:'الإعدادات', outline:'في هذا الملخص', chapter1:'الشغل والطاقة', chapter2:'طاقة الحركة', chapter3:'حفظ الطاقة', chapter4:'أفكار للمراجعة', paperTitle:'دع الدرس يأخذ\nمساحته.', paperSub:'كل فكرة تستحق أن تبقى. نجمعها لك بهدوء.', paperReady:'من الدرس،\nإلى دفترِك.', margin:'من الشريحة إلى الفكرة', pageTitle:'الطاقة والحركة', pageSub:'الفيزياء · الدرس الرابع · ملخص للمراجعة', noteHeading:'ما هي طاقة الحركة؟', note:'هي الطاقة التي يمتلكها الجسم بسبب حركته. تزداد بزيادة كتلته، وبمربع سرعته.', takeaway:'تذكّر: مضاعفة السرعة تجعل طاقة الحركة أربعة أضعاف.', citation:'المصدر: الشريحة 12 · 28:14–31:02', pageLabel:'ملخص الدرس', pageNum:'01', prismTitle:'الدرس يجري. والأفكار تبقى.', prismSub:'مساحة واحدة للصوت، والشرائح، وما ستراجعه لاحقًا.', beacon:'كل لحظة في مكانها.', timeline:'مسار الدرس', timelineHint:'علامات الشرائح المحفوظة', duration:'32 دقيقة من الدرس', prismReady:'صار الدرس أقرب.', prismReadySub:'12 شريحة تحوّلت إلى ملخص من 8 صفحات.', reviewNotice:'هذه معاينة تصميم فقط؛ لن يُنشأ ملف ولن يبدأ تسجيل.', savedNotice:'زر توضيحي: حفظ PDF سيُوصَل بالتطبيق بعد اختيار التصميم.', editHint:'اختر التصميم أولًا؛ أدوات المراجعة تأتي في مرحلة الواجهة.', full:'عرض كامل', return:'العودة إلى التسجيل', pdf:'ملف PDF · 8 صفحات', checked:'جاهز للمراجعة', reason:'سبب الاحتفاظ: تغيّر محتوى الشريحة' },
+      fr: { dir:'ltr', name:'Français', sample:'Maquette · données fictives', recording:'Enregistrement', result:'Résultat', lesson:'Physique · Cours 04', topic:'Énergie et mouvement', focus:'Gardez le fil du cours.', reassurance:'Le son et les diapositives sont conservés pendant le cours.', active:'Enregistrement en cours', paused:'Enregistrement en pause', recordingTime:'Durée enregistrée', current:'Diapositive actuelle', sound:'Audio du cours', signal:'Signal audio présent', pause:'Mettre en pause', resume:'Reprendre', end:'Terminer le cours', slides:'Diapositives conservées', slideCount:'12 diapositives', captured:'Conservée à 28:14 · contenu modifié', safe:'Enregistré sur cet appareil', lastSave:'Dernière sauvegarde : il y a 2 s', source:'Source : onglet du navigateur', lang:'Cours : français · Notes : arabe', ready:'Vos notes sont prêtes.', readySub:'Les idées essentielles et les diapositives, organisées pour réviser.', readyBadge:'Notes terminées', pages:'pages', minute:'minutes', slideUnit:'diapositives', pdfLang:'Langue des notes', arabic:'Arabe', notesStyle:'Présentation', notesStyleValue:'Explications et diapositives', export:'Enregistrer le PDF', review:'Relire les notes', privacy:'Supprimer le média brut après sauvegarde', preview:'Aperçu des notes', pager:'Page 1 sur 8', library:'Mes cours', settings:'Réglages', outline:'Dans ces notes', chapter1:'Travail et énergie', chapter2:'Énergie cinétique', chapter3:'Conservation de l’énergie', chapter4:'Pour réviser', paperTitle:'Laissez le cours\nprendre sa place.', paperSub:'Chaque idée mérite de rester. Nous les rassemblons, au calme.', paperReady:'Du cours\nà votre carnet.', margin:'De la diapositive à l’idée', prismTitle:'Le cours avance. Les idées restent.', prismSub:'Un espace pour le son, les diapositives et votre prochaine révision.', beacon:'Chaque instant à sa place.', timeline:'Le fil du cours', timelineHint:'Repères des diapositives conservées', duration:'32 minutes de cours', prismReady:'Le cours devient plus clair.', prismReadySub:'12 diapositives, réunies dans 8 pages de notes.', reviewNotice:'Maquette seulement : aucun fichier ni enregistrement réel.', savedNotice:'Démonstration : l’export sera relié à l’application après le choix du design.', editHint:'Les outils de relecture viendront après le choix du design.', full:'Aperçu complet', return:'Retour au cours', pdf:'PDF · 8 pages', checked:'Prêt à relire', reason:'Conservée : contenu de la diapositive modifié' }
+    };
+    const fixture = { elapsed:'32:18', slides:12, pages:8, minutes:32, wave:[5,9,17,12,23,15,8,19,26,14,22,11,6,16,24,13,7], titles:['Travail et force','Énergie potentielle','Conservation','Application','Énergie cinétique'], times:['04:12','10:36','18:07','23:45','28:14'] };
+    const states = {};
+    const escape = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const lines = value => escape(value).replaceAll('\n','<br>');
+    const wave = () => `<div class="ll-wave" aria-hidden="true">${fixture.wave.map(v=>`<span style="--level:${v}px"></span>`).join('')}</div>`;
+    const badge = value => `<span class="ll-badge"><span class="ll-dot"></span>${escape(value)}</span>`;
+    const button = (label, action, kind='', symbol='') => `<button type="button" class="ll-button cursor-interaction ${kind}" data-action="${action}">${symbol?`<span class="ll-action-symbol" aria-hidden="true">${symbol}</span>`:''}${escape(label)}</button>`;
+    const graph = () => `<svg class="ll-graph" viewBox="0 0 240 130" role="img" aria-label="Énergie cinétique proportionnelle au carré de la vitesse"><path d="M22 12V108H225" fill="none" stroke="currentColor" opacity=".3"/><path d="M22 108H225M22 72H225M22 36H225" fill="none" stroke="currentColor" opacity=".08"/><path d="M23 107Q125 106 214 16L214 108Z" fill="currentColor" opacity=".08"/><path d="M23 107Q125 106 214 16" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="155" cy="64" r="5" fill="currentColor"/><text x="7" y="13" fill="currentColor" font-size="12">E</text><text x="225" y="125" fill="currentColor" font-size="12">v</text></svg>`;
+    const slide = () => `<div class="ll-slide" lang="fr" dir="ltr"><div class="ll-slide-kicker">PHYSIQUE / CHAPITRE 04</div><h2>L’énergie cinétique</h2><p class="ll-slide-copy">L’énergie d’un corps en mouvement.</p><div class="ll-slide-art"><div class="ll-slide-formula">E<span style="font-size:.6em">c</span> = ½ mv²<small>m : masse &nbsp;·&nbsp; v : vitesse</small></div>${graph()}</div><div class="ll-slide-foot"><span>ÉNERGIE & MOUVEMENT</span><span>12</span></div></div>`;
+    const slidePanel = t => `<div class="ll-slide-panel"><div class="ll-slide-top"><span>${t.current}</span><bdi>12 / 12</bdi></div>${slide()}<div class="ll-slide-note"><span class="ll-dot"></span>${t.captured}</div></div>`;
+    const thumbs = t => `<section class="ll-filmstrip"><div class="ll-section-label"><span>${t.slides}</span><span class="ll-caption">${t.slideCount}</span></div><div class="ll-thumbs">${fixture.titles.map((title,i)=>`<div class="ll-thumb"><div class="ll-thumb-art ${i===4?'active':''}"><div class="ll-thumb-title">${title}</div><div class="ll-thumb-rule"></div><div class="ll-thumb-rule short"></div><span class="ll-thumb-number">${String(i+8).padStart(2,'0')}</span></div><div class="ll-thumb-meta"><bdi>${fixture.times[i]}</bdi><span>${i===4?t.current:''}</span></div></div>`).join('')}</div></section>`;
+    const footer = t => `<footer class="ll-footer"><span>${t.safe} · ${t.lastSave}</span><span>${t.lang}</span></footer>`;
+    const page = () => { const p=copy.ar; return `<article class="ll-page" lang="ar" dir="rtl" aria-label="${p.preview}"><div class="ll-page-header"><bdi>LectureLens</bdi><span>${p.pageLabel}</span></div><h2>${p.pageTitle}</h2><div class="ll-page-sub">${p.pageSub}</div>${slide()}<h3>${p.noteHeading}</h3><p>${p.note}</p><div class="ll-note-callout">${p.takeaway}</div><div class="ll-page-footer"><span>${p.citation}</span><span>${p.pageNum}</span></div></article>`; };
+    const preview = t => `<div class="ll-preview">${page()}<div class="ll-pager"><span aria-hidden="true">‹</span><span>${t.pager}</span><span aria-hidden="true">›</span></div></div>`;
+    const stats = t => `<div class="ll-summary"><div class="ll-stat"><strong>8</strong><span>${t.pages}</span></div><div class="ll-stat"><strong>12</strong><span>${t.slideUnit}</span></div><div class="ll-stat"><strong>32</strong><span>${t.minute}</span></div></div>`;
+    const settings = t => `<div class="ll-settings"><div><span>${t.pdfLang}</span><b>${t.arabic}</b></div><div><span>${t.notesStyle}</span><b>${t.notesStyleValue}</b></div></div>`;
+    const chapters = t => `<div class="ll-chapters">${[t.chapter1,t.chapter2,t.chapter3,t.chapter4].map((v,i)=>`<div class="ll-chapter"><div>${v}</div><span>${String(i*2+1).padStart(2,'0')}</span></div>`).join('')}</div>`;
+    const controls = (t,s) => `<div class="ll-actions">${button(s.paused?t.resume:t.pause,'pause','quiet',s.paused?'▷':'Ⅱ')}${button(t.end,'result','primary','■')}</div>`;
+    const exportActions = t => `<div class="ll-actions">${button(t.export,'save','primary','↓')}${button(t.review,'review','quiet')}</div><p class="ll-save-note">${t.privacy}</p><div class="ll-notice" role="status" aria-live="polite"></div>`;
+    const chrome = t => `<header class="ll-chrome"><span class="ll-brand"><span class="ll-mark" aria-hidden="true"></span>LectureLens</span><span class="ll-caption" lang="${t.dir==='rtl'?'ar':'fr'}" dir="${t.dir}">${t.sample}</span><span class="ll-window-controls" aria-hidden="true"><span>−</span><span>□</span><span>×</span></span></header>`;
+    const tabs = (t,s) => `<nav class="ll-tabs" aria-label="${t.sample}"><button type="button" class="ll-tab cursor-interaction" data-action="recording" aria-pressed="${s.screen==='recording'}">${t.recording}</button><button type="button" class="ll-tab cursor-interaction" data-action="result" aria-pressed="${s.screen==='result'}">${t.result}</button></nav>`;
+    const rail = t => `<aside class="ll-rail" aria-hidden="true"><div class="ll-rail-item active"><span class="ll-rail-symbol">◉</span>${t.recording}</div><div class="ll-rail-item"><span class="ll-rail-symbol">▤</span>${t.library}</div><div class="ll-rail-item ll-rail-bottom"><span class="ll-rail-symbol">⋯</span>${t.settings}</div></aside>`;
+    function orbit(t,s) {
+      const top=`<div class="ll-topline"><span class="ll-eyebrow">${t.lesson} &nbsp; / &nbsp; ${t.topic}</span>${tabs(t,s)}</div>`;
+      const record=`<div class="ll-heading"><div><h1>${t.focus}</h1><p class="ll-subtitle">${t.reassurance}</p></div><span class="ll-status"><span class="ll-dot"></span>${s.paused?t.paused:t.active}</span></div><div class="ll-orbit-record">${slidePanel(t)}<div class="ll-signal"><div class="ll-orb"><span class="ll-caption">${t.recordingTime}</span><div class="ll-time">${fixture.elapsed}</div>${wave()}</div><div class="ll-caption">${t.signal}</div>${controls(t,s)}</div></div>${thumbs(t)}`;
+      const result=`<div class="ll-orbit-result"><section class="ll-result-intro">${badge(t.readyBadge)}<h1>${t.ready}</h1><p class="ll-subtitle">${t.readySub}</p>${stats(t)}${settings(t)}${exportActions(t)}</section>${preview(t)}</div>`;
+      return `${chrome(t)}<div class="ll-layout">${rail(t)}<main class="ll-content">${top}${s.screen==='recording'?record:result}${footer(t)}</main></div>`;
+    }
+    function paper(t,s) {
+      const top=`<div class="ll-paper-nav ll-row"><span class="ll-eyebrow">${t.lesson} &nbsp; / &nbsp; ${t.topic}</span>${tabs(t,s)}</div>`;
+      const record=`<div class="ll-paper-record"><section><span class="ll-status"><span class="ll-dot"></span>${s.paused?t.paused:t.active}</span><h1>${lines(t.paperTitle)}</h1><p class="ll-subtitle">${t.paperSub}</p><div class="ll-paper-timer"><span class="ll-caption">${t.recordingTime}</span><div class="ll-row"><div class="ll-time">${fixture.elapsed}</div>${wave()}</div></div>${controls(t,s)}</section><div class="ll-paper-sheet"><div class="ll-slide-top"><span>${t.current}</span><bdi>12 / 12</bdi></div>${slide()}<div class="ll-paper-sheet-caption"><span>${t.captured}</span><bdi>28:14</bdi></div></div></div><div class="ll-paper-film">${thumbs(t)}</div>`;
+      const result=`<div class="ll-paper-result">${preview(t)}<section class="ll-result-intro">${badge(t.readyBadge)}<h1>${lines(t.paperReady)}</h1><p class="ll-subtitle">${t.readySub}</p>${stats(t)}<div class="ll-caption">${t.outline}</div>${chapters(t)}<div style="margin-top:23px">${exportActions(t)}</div></section></div>`;
+      return `${chrome(t)}<main class="ll-paper-content">${top}${s.screen==='recording'?record:result}${footer(t)}</main>`;
+    }
+    function prism(t,s) {
+      const top=`<header class="ll-prism-header"><span class="ll-eyebrow">${t.lesson} &nbsp; / &nbsp; ${t.topic}</span>${tabs(t,s)}</header>`;
+      const ribbon=`<div class="ll-prism-timeline"><div class="ll-section-label"><span>${t.timeline}</span><span class="ll-caption">${t.timelineHint}</span></div><div class="ll-ribbon" aria-hidden="true">${Array.from({length:72},(_,i)=>`<span class="${[9,23,40,53,63].includes(i)?'marker':''}" style="--ribbon-level:${fixture.wave[i%fixture.wave.length]}px"></span>`).join('')}</div><div class="ll-ribbon-labels"><span>00:00</span><span>08:00</span><span>16:00</span><span>24:00</span><span>32:18</span></div></div>`;
+      const record=`<div class="ll-heading"><div><h1>${t.prismTitle}</h1><p class="ll-subtitle">${t.prismSub}</p></div></div><div class="ll-prism-record"><section class="ll-beacon"><span class="ll-status"><span class="ll-dot"></span>${s.paused?t.paused:t.active}</span><div class="ll-time">${fixture.elapsed}</div><h2>${t.beacon}</h2>${wave()}<div class="ll-beacon-bottom"><span>${t.slideCount}</span><span>${t.signal}</span></div></section><div class="ll-prism-main">${slidePanel(t)}<div class="ll-prism-controls"><span class="ll-caption">${t.source}</span>${controls(t,s)}</div></div></div>${ribbon}`;
+      const result=`<div class="ll-prism-result"><div class="ll-prism-result-top"><div>${badge(t.readyBadge)}<h1>${t.prismReady}</h1><p class="ll-subtitle">${t.prismReadySub}</p></div><div>${button(t.export,'save','primary','↓')}<p class="ll-save-note">${t.pdf}</p></div></div><div class="ll-prism-result-body"><aside class="ll-prism-index"><h3>${t.outline}</h3>${stats(t)}${chapters(t)}<div style="margin-top:20px">${button(t.review,'review','quiet')}</div><p class="ll-save-note">${t.privacy}</p><div class="ll-notice" role="status" aria-live="polite"></div></aside>${preview(t)}</div></div>`;
+      return `${chrome(t)}<main class="ll-prism-content">${top}${s.screen==='recording'?record:result}${footer(t)}</main>`;
+    }
+    const valid = (key,value) => ({screen:['recording','result'],theme:['system','light','dark'],locale:Object.keys(copy)})[key]?.includes(value) || (key==='paused' && typeof value==='boolean');
+    const restore = snapshot => {
+      for (const app of root.querySelectorAll('.ll-app')) {
+        const values = snapshot?.privateContent?.[app.dataset.direction];
+        if (values && app.llPreview) app.llPreview.set(values);
+      }
+    };
+    const remember = direction => {
+      const result = window.openai?.setWidgetState?.({modelContent:{previewDirection:direction,screen:states[direction].screen},privateContent:states});
+      result?.catch?.(()=>{});
+    };
+    root.querySelectorAll('.ll-app').forEach(app => {
+      const direction=app.dataset.direction;
+      const s=states[direction]={screen:'recording',theme:'system',locale:'ar',paused:false};
+      const render=()=>{
+        const focused = app.contains(document.activeElement) ? document.activeElement.dataset.action : null;
+        const t=copy[s.locale];
+        app.dir=t.dir; app.lang=s.locale; app.style.colorScheme=s.theme==='system'?'light dark':s.theme;
+        app.dataset.screen=s.screen; app.dataset.paused=String(s.paused);
+        app.innerHTML=({orbit,paper,prism}[direction])(t,s);
+        app.querySelector('[data-action="pause"]')?.setAttribute('aria-pressed',String(s.paused));
+        // A demo rerender must not strand keyboard users on the document body.
+        if(focused) {
+          const next = app.querySelector(`[data-action="${focused}"]`);
+          next?.focus({preventScroll:true});
+        }
+      };
+      app.addEventListener('click',e=>{const target=e.target.closest('[data-action]');if(!target)return;const action=target.dataset.action;const t=copy[s.locale];if(action==='pause'){s.paused=!s.paused;render();}else if(['recording','result'].includes(action)){s.screen=action;render();}else {const notice=app.querySelector('.ll-notice');if(notice)notice.textContent=action==='save'?t.savedNotice:t.editHint;}remember(direction);});
+      render();
+      if(globalThis.Tweak){const tweak=new Tweak({container:app,onChange:()=>{render();remember(direction);}});tweak.addSelect(s,'screen',{label:'الشاشة',options:[{label:'التسجيل',value:'recording'},{label:'النتيجة',value:'result'}]});tweak.addSelect(s,'theme',{label:'المظهر',options:[{label:'حسب الجهاز',value:'system'},{label:'فاتح',value:'light'},{label:'داكن',value:'dark'}]});tweak.addSelect(s,'locale',{label:'لغة الواجهة',options:[{label:'العربية',value:'ar'},{label:'Français',value:'fr'}]});}
+      app.llPreview={set(values){for(const [key,value] of Object.entries(values))if(valid(key,value))s[key]=value;render();}};
+    });
+    restore(window.openai?.widgetState);
+    window.addEventListener('openai:set_globals',event=>restore(event.detail?.globals?.widgetState));
+  })();
+  </script>
+</div>

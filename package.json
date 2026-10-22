@@ -7,6 +7,8 @@
   "license": "UNLICENSED",
   "main": "dist/main/src/shell/main.js",
   "scripts": {
+    "design:preview": "node docs/design-lab/build.mjs",
+    "design:check": "node docs/design-lab/render.mjs",
     "dev": "node tools/native.mjs dev",
     "smoke:native": "node tools/native.mjs smoke",
     "browser:setup": "node tools/browser-setup.mjs",

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src data:; connect-src 'none'; media-src 'none'; frame-src 'none'">
+  <title>LectureLens — مختبر التصميم</title>
+  <style>
+    :root { color-scheme: light dark; font-family: 'LL Plex', sans-serif; background: light-dark(#f5f5f3,#131616); color: light-dark(#202525,#edf2ef); }
+    body { margin: 0; padding: 24px; }
+    .lab-controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin-block-end: 20px; }
+    .lab-controls label { display: grid; gap: 5px; }
+    .lab-controls select { font: inherit; padding: 8px 12px; min-height: 44px; border: 1px solid light-dark(#bbc4bf,#54625a); border-radius: 8px; color: inherit; background: light-dark(#fff,#202824); }
+    .lab-controls p { margin: 0; margin-inline-start: auto; max-width: 420px; }
+    .cursor-interaction { cursor: pointer; }
+    @media (max-width: 680px) { body { padding: 10px; } .lab-controls p { margin-inline-start: 0; } }
+  </style>
+</head>
+<body>
+  <nav class="lab-controls" aria-label="خيارات المقارنة">
+    <label>الاتجاه<select id="lab-direction"><option value="orbit">مدار</option><option value="paper">ورق</option><option value="prism">طيف</option></select></label>
+    <label>الشاشة<select id="lab-screen"><option value="recording">التسجيل</option><option value="result">النتيجة</option></select></label>
+    <label>المظهر<select id="lab-theme"><option value="system">حسب الجهاز</option><option value="light">فاتح</option><option value="dark">داكن</option></select></label>
+    <label>لغة الواجهة<select id="lab-locale"><option value="ar">العربية</option><option value="fr">Français</option></select></label>
+    <p>نماذج للمقارنة فقط. الأرقام والشرائح تجريبية. لا يبدأ أي تسجيل.</p>
+  </nav>
+  <!-- DIRECTIONS -->
+  <script>
+    (() => {
+      const fields = Object.fromEntries(['direction','screen','theme','locale'].map(key => [key, document.getElementById(`lab-${key}`)]));
+      function update() {
+        const values = Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, field.value]));
+        document.querySelectorAll('[data-variant]').forEach(section => {
+          const app = section.querySelector('.ll-app');
+          section.hidden = app.dataset.direction !== values.direction;
+          app.llPreview.set(values);
+        });
+      }
+      for (const field of Object.values(fields)) field.addEventListener('change', update);
+      document.getElementById('ll-design-lab').addEventListener('click', event => {
+        const action = event.target.closest('[data-action]')?.dataset.action;
+        if (['recording','result'].includes(action)) fields.screen.value = action;
+      });
+      update();
+    })();
+  </script>
+</body>
+</html>
