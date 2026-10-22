@@ -23,7 +23,10 @@
     "smoke:dev": "node tools/dev.mjs --smoke",
     "package": "npm run build && electron-builder --win nsis --x64 --publish never",
     "replay": "tsc -p tsconfig.main.json && node dist/main/tools/replay.js",
-    "eval": "tsc -p tsconfig.main.json && node dist/main/tools/eval.js"
+    "eval": "tsc -p tsconfig.main.json && node dist/main/tools/eval.js",
+    "speech:setup": "node tools/speech-setup.mjs",
+    "speech:spike": "node tools/speech-spike.mjs",
+    "test:speech": "node --test tests/speech.test.mjs"
   },
   "devDependencies": {
     "@types/chrome": "0.3.6",

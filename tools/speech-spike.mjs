@@ -1,0 +1,18 @@
+import { mkdir, readFile, access } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { defaultLanguages,languages } from '../config/languages.ts';
+import { runProcess,transcribe } from '../src/adapters/speech/local-whisper.mjs';
+const args=process.argv.slice(2),input=args[0];
+const option=(name,fallback)=>{const i=args.indexOf(name);return i<0?fallback:args[i+1];};
+const model=option('--model','small'),language=option('--language',defaultLanguages.teacher),seconds=Number(option('--seconds','120'));
+if(!input||!languages[language]||!['small','base'].includes(model)||!Number.isFinite(seconds)||seconds<=0||seconds>180)throw Error('Usage: npm run speech:spike -- <audio.webm|wav> [--model small|base] [--language registry-code] [--seconds 1..180]');
+await access(resolve('.tools/speech',model+'-q5.bin'));
+const output=resolve('artifacts/speech',randomUUID());await mkdir(output,{recursive:true});
+const wav=resolve(output,'sample.wav');
+const controller=new AbortController();process.once('SIGINT',()=>controller.abort());
+await runProcess(process.execPath,['tools/run-electron.mjs','tools/speech-decode.cjs',resolve(input),wav,String(seconds)],{signal:controller.signal,timeoutMs:70000,stderr:'inherit'});
+const info=JSON.parse(await readFile(wav+'.json','utf8'));
+console.log('Transcribing '+info.audioSeconds.toFixed(1)+' seconds locally with '+model+'…');
+const report=await transcribe(wav,{model,language:languages[language].speechCode,output,durationSeconds:info.audioSeconds,signal:controller.signal});
+console.log(JSON.stringify({output,audioSeconds:report.audioSeconds,processingSeconds:report.processingSeconds,segments:report.segments.length,quality:report.quality},null,2));

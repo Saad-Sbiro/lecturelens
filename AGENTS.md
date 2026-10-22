@@ -33,6 +33,7 @@ Never claim something works unless you ran it. State what was verified, what was
 - dev (native WPF, XAML live reload): `npm run dev` (.NET 10 SDK; local `.tools/dotnet` supported)
 - test: `npm test` (offline); shell checks: `npm run smoke` / `npm run smoke:dev`
 - lint/typecheck: `npm run typecheck`
+- speech spike: `npm run speech:setup`; `npm run speech:spike -- <audio.webm> --seconds 60`; mocks: `npm run test:speech`
 - replay a fixture: `npm run replay -- fixtures/synthetic-session.json`
 - golden-set eval: `npm run eval` (readiness only until labelled fixtures exist)
 - native preview: `npm run package:native` → `release/native-win-x64/LectureLens.exe`; check: `npm run smoke:native`

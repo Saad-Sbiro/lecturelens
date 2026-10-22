@@ -93,3 +93,6 @@ Owner deferred automatic region detection. Default to unconfirmed manual crop an
 
 ## 2026-10-22 — Original logo and wider popup
 Use the supplied source assets in src/assets unchanged. Embed logomark.png as a WPF resource and let Vite bundle the same file for the extension and crop editor. Gold/amber accents and warm charcoal surfaces replace the mint/slate palette. Set the Chrome popup to 600px with a two-column preview card so recording controls remain reachable. No new dependencies.
+
+## 2026-10-22 — Local audio feasibility probe
+Start with CPU whisper.cpp v1.8.3 + multilingual Small Q5 and Silero v6.2.0; compare Base Q5. These optional MIT-licensed downloaded tools/models are pinned and SHA-256 checked under ignored .tools/speech. No npm dependency added. The existing development Electron runtime is used only for offline replay decoding, not shipped with WPF. This isolates model feasibility from a future native decoder. See speech-spike.md for measured results and limitations. Owner permits considering NVIDIA trial APIs for personal summarization experiments later; local speech remains the chosen path and no media was uploaded.
