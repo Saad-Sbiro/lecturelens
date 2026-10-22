@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><TargetFramework>net10.0-windows</TargetFramework><OutputType>Exe</OutputType><UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+ <ItemGroup>
+  <ProjectReference Include="../../src/native/Core/Core.csproj"/>
+  <Compile Include="../../src/native/Desktop/Adapters/*.cs" Link="Adapters/%(Filename)%(Extension)"/>
+  <Content Include="../../config/languages.json" Link="languages.json" CopyToOutputDirectory="PreserveNewest"/>
+ </ItemGroup>
+</Project>

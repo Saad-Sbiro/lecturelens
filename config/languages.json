@@ -1,0 +1,46 @@
+{
+  "fr": {
+    "code": "fr",
+    "nativeName": "Français",
+    "englishName": "French",
+    "script": "Latn",
+    "direction": "ltr",
+    "enabled": true,
+    "status": "experimental",
+    "speechCode": "fr",
+    "textCode": "fra",
+    "fontStack": "Arial, sans-serif",
+    "promptLocale": "fr",
+    "providers": [],
+    "pdfLabels": {
+      "review": "Document de travail généré par IA. Vérifiez les termes techniques et les passages incertains dans la transcription source.",
+      "images": "Capture conservée du cours. Les images ne sont pas analysées par le modèle dans cette version.",
+      "sources": "Transcription source"
+    },
+    "defaultTeacher": true,
+    "defaultOutput": true,
+    "defaultUi": false
+  },
+  "en": {
+    "code": "en",
+    "nativeName": "English",
+    "englishName": "English",
+    "script": "Latn",
+    "direction": "ltr",
+    "enabled": true,
+    "status": "experimental",
+    "speechCode": "en",
+    "textCode": "eng",
+    "fontStack": "Arial, sans-serif",
+    "promptLocale": "en",
+    "providers": [],
+    "pdfLabels": {
+      "review": "AI-generated study draft. Check technical terms and uncertain passages against the source transcript.",
+      "images": "Saved lesson capture. Images are not analyzed by the model in this version.",
+      "sources": "Source transcript"
+    },
+    "defaultTeacher": false,
+    "defaultOutput": false,
+    "defaultUi": true
+  }
+}

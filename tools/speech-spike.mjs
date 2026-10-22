@@ -1,7 +1,8 @@
 import { mkdir, readFile, access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { defaultLanguages,languages } from '../config/languages.ts';
+const languages=JSON.parse(await readFile(new URL('../config/languages.json',import.meta.url)));
+const defaultLanguages={teacher:Object.keys(languages).find(code=>languages[code].defaultTeacher)};
 import { runProcess,transcribe } from '../src/adapters/speech/local-whisper.mjs';
 const args=process.argv.slice(2),input=args[0];
 const option=(name,fallback)=>{const i=args.indexOf(name);return i<0?fallback:args[i+1];};

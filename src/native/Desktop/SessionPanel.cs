@@ -46,7 +46,22 @@ internal sealed class SessionPanel(FrameworkElement view)
         ((Button)view.FindName("ExtensionFolder")).Click += (_, _) =>
         {
             var path = Environment.GetEnvironmentVariable("LECTURELENS_EXTENSION");
-            if (path != null && Directory.Exists(path)) Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                        if (path == null || !Directory.Exists(path)) { message.Text = (string)view.FindResource("extensionUnavailable"); return; }
+            try {
+                Clipboard.SetText(Path.GetFullPath(path));
+                var chrome = new[] {
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Google", "Chrome", "Application", "chrome.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Google", "Chrome", "Application", "chrome.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Google", "Chrome", "Application", "chrome.exe")
+                }.FirstOrDefault(File.Exists);
+                if (chrome != null) {
+                    var start = new ProcessStartInfo(chrome) { UseShellExecute = false };
+                    start.ArgumentList.Add("chrome://extensions");
+                    Process.Start(start);
+                }
+                message.Text = (string)view.FindResource("extensionHelp");
+                MessageBox.Show(message.Text, "LectureLens");
+            } catch (Exception e) { message.Text = e.Message; }
         };
         // Verify packets on explicit refresh, never repeatedly scan hours of media on a UI timer.
         _ = Run(async () => { sessions.ItemsSource = await Task.Run(store.List); });
