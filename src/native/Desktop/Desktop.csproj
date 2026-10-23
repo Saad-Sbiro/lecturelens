@@ -2,11 +2,13 @@
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><OutputType>WinExe</OutputType>
     <AssemblyName>LectureLens</AssemblyName><StartupObject>LectureLens.Desktop.Program</StartupObject>
+    <ApplicationIcon>../../assets/logomark.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Storage/Storage.csproj" />
     <Page Remove="MainWindow.xaml" />
     <Resource Include="../../assets/logomark.png" Link="assets/logomark.png" />
+    <Resource Include="../../assets/logomark.ico" Link="assets/logomark.ico" />
     <Content Include="MainWindow.xaml" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../../config/languages.json" Link="languages.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../../config/speech-assets.json" Link="speech-assets.json" CopyToOutputDirectory="PreserveNewest" />

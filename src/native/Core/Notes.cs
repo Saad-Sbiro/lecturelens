@@ -1,8 +1,8 @@
 namespace LectureLens.Core;
-public record NoteSource(string Id, string Label, string Text);
+public record NoteSource(string Id, string Label, string Text, double? Start = null, double? End = null, string? TimestampBasis = null, int? SlideId = null, double? Confidence = null);
 public record NoteSection(string Title, string[] Bullets, string[] SourceIds);
 public record StudyNotes(string Title, string Overview, NoteSection[] Sections);
-public record NotesPreferences(string Detail, string Language, bool IncludeSlides);
+public record NotesPreferences(string Detail, string Language, bool IncludeSlides, string? Topic = null);
 public interface ITextGenerator { Task<StudyNotes> Generate(IReadOnlyList<NoteSource> sources, NotesPreferences preferences, CancellationToken cancellation); }
 public interface IDocumentRenderer { Task<string> Render(StudyNotes notes, IReadOnlyList<NoteSource> sources, NotesPreferences preferences, string sessionFolder, string outputFolder, CancellationToken cancellation); }
 public static class NotesValidation

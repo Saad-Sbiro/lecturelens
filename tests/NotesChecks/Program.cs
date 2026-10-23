@@ -28,10 +28,15 @@ using var badHttp=new HttpClient(new FakeHandler(JsonSerializer.Serialize(notes)
 try {await new NvidiaNotes("test",Path.Combine(root,"bad"),badHttp).Generate(source,prefs,CancellationToken.None);throw new Exception("truncation accepted");}catch(InvalidDataException){Console.WriteLine("PASS truncated response rejected");}
 if(args.Contains("--render")){
  var output=Path.GetFullPath("artifacts/pdf-preview");
- var pdf=await new BrowserPdf().Render(notes,source,prefs,root,output,CancellationToken.None);
+ var demoSources=new[]{new NoteSource("S1","first","Analyser les besoins.",0,10,"decoded-audio",0),new NoteSource("S2","second","Concevoir puis tester.",20,30,"decoded-audio",1)};
+ var demoNotes=new StudyNotes("Du besoin à la validation","Comprendre le problème, construire une solution, puis vérifier son comportement.",new[]{
+  new NoteSection("Comprendre avant de construire",new[]{"L’analyse clarifie le problème à résoudre et le résultat attendu.","Les contraintes servent à évaluer si une solution est adaptée au besoin."},new[]{"S1"}),
+  new NoteSection("Concevoir, tester et améliorer",new[]{"La conception organise la solution avant sa réalisation.","Les tests comparent le comportement observé au résultat attendu. Ils aident à identifier les corrections nécessaires."},new[]{"S2"})});
+ var pdf=await new BrowserPdf().Render(demoNotes,demoSources,prefs with{IncludeSlides=true},Path.GetFullPath("artifacts/pdf-preview-source"),output,CancellationToken.None);
  Check(File.ReadAllBytes(pdf).Take(5).SequenceEqual("%PDF-"u8.ToArray()),"actual PDF header");
  Console.WriteLine(pdf);
 }
+await CloudAndTimelineChecks.Run(root);
 Directory.Delete(root,true);
 sealed class FakeHandler(string content,string finish="stop"):HttpMessageHandler{
  public int Calls;

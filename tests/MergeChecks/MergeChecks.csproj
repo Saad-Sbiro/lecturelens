@@ -4,6 +4,8 @@
   <ProjectReference Include="../../src/native/Storage/Storage.csproj"/>
   <Compile Include="../../src/native/Desktop/Adapters/*.cs" Link="Adapters/%(Filename)%(Extension)"/>
   <Compile Include="../../src/native/Desktop/MergeWindow.cs" Link="MergeWindow.cs"/>
+  <Compile Include="../../src/native/Desktop/SlideSelection.cs" Link="SlideSelection.cs"/>
+  <Compile Include="../../src/native/Desktop/SlideReviewWindow.cs" Link="SlideReviewWindow.cs"/>
   <Resource Include="../../src/assets/logomark.png" Link="assets/logomark.png"/>
  </ItemGroup>
 </Project>

@@ -28,8 +28,9 @@ internal sealed class SessionPanel(FrameworkElement view)
         {
             if (sessions.SelectedItem is SessionInfo selected)
             {
-                var path = Path.Combine(store.Root, selected.Id, "slides", "index.html");
-                if (File.Exists(path)) Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                var folder = Path.Combine(store.Root, selected.Id);
+                var slides = Path.Combine(folder, "slides");
+                if (Directory.Exists(slides) && Directory.EnumerateFiles(slides, "*.slide.json").Any()) SlideReviewWindow.ShowFor(view, folder);
                 else message.Text = (string)view.FindResource("slidesPending");
             }
             return Task.CompletedTask;
@@ -84,7 +85,9 @@ internal sealed class SessionPanel(FrameworkElement view)
         watcher.Renamed += (sender, e) => Schedule(sender, e);
         view.Unloaded += (_, _) => { watcher.Dispose(); timer.Stop(); };
         // Rescan only when a lesson starts/ends or the user requests refresh.
-        _ = Run(async () => { await Refresh(); });
+        // Start after WPF installs its dispatcher synchronization context.
+        view.Loaded += async (_, _) => await Run(Refresh);
+        ((TextBox)view.FindName("SearchLessons")).TextChanged += (_, _) => Filter();
     }
     private async Task Refresh()
     {

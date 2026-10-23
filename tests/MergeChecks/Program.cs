@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using LectureLens.Core;
 using LectureLens.Storage;
+using LectureLens.Desktop;
 using LectureLens.Desktop.Adapters;
 
 internal static class Program
@@ -41,6 +42,10 @@ internal static class Program
         }
         using var reopened = new LocalStore(root);
         Check(reopened.List().Single(s => s.Id == merged).Title == "Ordered lesson", "merged lesson persists after reopening storage");
+        SlideSelection.Save(folder, [1]);
+        Check(SlideSelection.Load(folder).SetEquals([1]) && Directory.GetFiles(Path.Combine(folder, "slides"), "*.slide.json").Length == 3, "soft slide removal preserves captured files");
+        SlideSelection.Save(folder, []);
+        Check(SlideSelection.Load(folder).Count == 0, "removed slide can be restored");
         File.Delete(Path.Combine(folder, "audio.wav"));
         Check(File.ReadAllBytes(reopened.Recover(merged)).SequenceEqual(wav), "merged audio recovers exactly from durable packets");
         var pair = await new RecordingMerge(new FakeDecoder()).Run(root, ids.Take(2).ToArray(), "Pair", null, CancellationToken.None);

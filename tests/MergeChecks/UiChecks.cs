@@ -48,7 +48,36 @@ internal static class UiChecks
         };
         timer.Start();
         var lessons = new[] { "Part A", "Part B", "Part C" }.Select(title => new SessionInfo(Guid.NewGuid().ToString(), "2026-10-23T10:00:00Z", "finished", 1, 32000, [], Title: title)).ToArray();
-        MergeWindow.Show(view, lessons); owner.Close(); app.Shutdown();
+        MergeWindow.Show(view, lessons);
+        var folder = Path.GetFullPath("artifacts/slide-review-check");
+        Directory.CreateDirectory(Path.Combine(folder, "slides"));
+        var jpeg = new JpegBitmapEncoder();
+        jpeg.Frames.Add(BitmapFrame.Create(BitmapSource.Create(2, 2, 96, 96, PixelFormats.Bgr24, null, new byte[12], 6)));
+        using var bytes = new MemoryStream(); jpeg.Save(bytes);
+        var data = bytes.ToArray();
+        File.WriteAllText(Path.Combine(folder, "slides", "00000.slide.json"), JsonSerializer.Serialize(new { slide = 0, atMs = 0, data = Convert.ToBase64String(data), sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(data)) }));
+        var reviewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        var frame = new DispatcherFrame();
+        int ticks = 0;
+        reviewTimer.Tick += (_, _) => {
+            var page = ((Grid)view).Children.OfType<SlideReviewWindow>().Single();
+            var layout = (DockPanel)page.Content;
+            var cards = (WrapPanel)layout.Children.OfType<ScrollViewer>().Single().Content;
+            if (cards.Children.Count == 1) {
+                if (app.Windows.Count != 1) failure = new Exception("Slide review opened another window");
+                layout.Children.OfType<Button>().Single(b => b.Name == "BackToLesson").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                if (((Grid)view).Children.OfType<SlideReviewWindow>().Any()) failure = new Exception("Back navigation failed");
+                Console.WriteLine("PASS slide review loads in the same window and returns to lesson");
+                reviewTimer.Stop(); frame.Continue = false;
+            } else if (++ticks >= 50) {
+                failure = new Exception("Slide review failed to load within five seconds");
+                reviewTimer.Stop(); frame.Continue = false;
+            }
+        };
+        reviewTimer.Start();
+        SlideReviewWindow.ShowFor(view, folder);
+        Dispatcher.PushFrame(frame);
+        owner.Close(); app.Shutdown();
         if (failure != null) throw failure;
     }
 }

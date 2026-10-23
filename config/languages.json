@@ -15,7 +15,9 @@
     "pdfLabels": {
       "review": "Document de travail généré par IA. Vérifiez les termes techniques et les passages incertains dans la transcription source.",
       "images": "Capture conservée du cours. Les images ne sont pas analysées par le modèle dans cette version.",
-      "sources": "Transcription source"
+      "sources": "Transcription source",
+      "unmatched": "Aucune explication orale ne peut être associée à cette capture. Vérifiez la transcription ; aucun contenu n’a été inventé.",
+      "aligned": "Explication issue de la parole à ce moment du cours. Association temporelle approximative ; image non analysée."
     },
     "defaultTeacher": true,
     "defaultOutput": true,
@@ -37,7 +39,9 @@
     "pdfLabels": {
       "review": "AI-generated study draft. Check technical terms and uncertain passages against the source transcript.",
       "images": "Saved lesson capture. Images are not analyzed by the model in this version.",
-      "sources": "Source transcript"
+      "sources": "Source transcript",
+      "unmatched": "No spoken explanation can be matched to this capture. Check the transcript; no content has been invented.",
+      "aligned": "Explanation from speech at this point in the lesson. Approximate time match; image not analyzed."
     },
     "defaultTeacher": false,
     "defaultOutput": false,

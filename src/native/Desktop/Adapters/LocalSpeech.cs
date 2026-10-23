@@ -23,7 +23,7 @@ internal sealed class LocalSpeech
   var speechCode=registered.GetProperty("speechCode").GetString()!;
   var audio=new[]{"audio.wav","audio.webm","recording.webm"}.Select(name=>Path.Combine(sessionFolder,name)).FirstOrDefault(File.Exists)??throw new FileNotFoundException("This lesson has no recovered audio. Choose Recover, then try transcription again.");
   var sourceInfo=new FileInfo(audio);var sourceSize=sourceInfo.Length;var sourceWrite=sourceInfo.LastWriteTimeUtc;
-  progress?.Report("Preparing saved lesson for local transcription…");
+  progress?.Report("Preparing saved lesson for transcription…");
   string audioHash;await using(var source=File.OpenRead(audio))audioHash=Convert.ToHexStringLower(await SHA256.HashDataAsync(source,cancel));
   var fingerprint=Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("stream-chunks-v1/"+runtime.Version+"/"+speechCode+"/"+audioHash)));
   var final=Path.Combine(sessionFolder,"speech-transcript.json");
@@ -43,7 +43,7 @@ internal sealed class LocalSpeech
     if(File.Exists(checkpoint))try{var previous=JsonSerializer.Deserialize<Segment[]>(await File.ReadAllTextAsync(checkpoint,cancel),Json);if(previous!=null&&Valid(previous,offset+duration)&&previous.All(s=>s.Start>=offset))part=previous;}catch(JsonException){}
     if(part==null)
     {
-     progress?.Report("Transcribing locally · "+TimeSpan.FromSeconds(offset).ToString(@"hh\:mm\:ss")+"–"+TimeSpan.FromSeconds(offset+duration).ToString(@"hh\:mm\:ss")+" · part "+chunk);
+     progress?.Report("Transcribing · "+TimeSpan.FromSeconds(offset).ToString(@"hh\:mm\:ss")+"–"+TimeSpan.FromSeconds(offset+duration).ToString(@"hh\:mm\:ss")+" · part "+chunk);
      var wav=stem+".wav";
      try
      {
@@ -78,7 +78,9 @@ internal sealed class LocalSpeech
   {
    var start=s.GetProperty("offsets").GetProperty("from").GetDouble()/1000;var end=s.GetProperty("offsets").GetProperty("to").GetDouble()/1000;var text=s.GetProperty("text").GetString()?.Trim()??"";
    if(!double.IsFinite(start)||!double.IsFinite(end)||start<0||end<start||end>duration+1)throw new InvalidDataException("Speech worker returned an invalid timestamp.");
-   output.Add(new(offset+Math.Min(start,duration),offset+Math.Min(end,duration),text,language,null,text.Length>0,text.Length>0?"transcribed-unreviewed":"empty-segment"));
+   var silent=s.TryGetProperty("noSpeech",out var ns)&&ns.ValueKind==JsonValueKind.Number&&ns.GetDouble()>0.8;
+   double? confidence=null;if(s.TryGetProperty("avgLogprob",out var lp)&&lp.ValueKind==JsonValueKind.Number&&double.IsFinite(lp.GetDouble()))confidence=Math.Clamp(Math.Exp(lp.GetDouble()),0,1);
+   output.Add(new(offset+Math.Min(start,duration),offset+Math.Min(end,duration),text,language,confidence,text.Length>0&&!silent,silent?"likely-no-speech":text.Length>0?"transcribed-unreviewed":"empty-segment"));
   }
   return output.ToArray();
  }

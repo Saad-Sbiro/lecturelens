@@ -9,14 +9,12 @@ using Microsoft.Win32;
 namespace LectureLens.Desktop;
 internal sealed class NotesStudio(FrameworkElement view)
 {
- record Preferences(string Detail,string Language,bool IncludeSlides,string Model,bool KeepRaw, string? TeacherLanguage = null);
+ record Preferences(string Detail,string Language,bool IncludeSlides,string Model,bool KeepRaw, string? TeacherLanguage = null, bool CloudSpeech = false, int ModelPreferenceVersion = 0);
  readonly DataGrid sessions=(DataGrid)view.FindName("Sessions");
  readonly TextBlock status=(TextBlock)view.FindName("SessionMessage");
  readonly ComboBox detail=(ComboBox)view.FindName("Detail");
  readonly ComboBox language=(ComboBox)view.FindName("PdfLanguage");
- readonly CheckBox images=(CheckBox)view.FindName("IncludeSlides");
  readonly ComboBox teacher=(ComboBox)view.FindName("TeacherLanguage");
- readonly CheckBox keep=(CheckBox)view.FindName("KeepRaw");
  string model=NvidiaNotes.DefaultModel;
  CancellationTokenSource? running;
  internal static bool IsGenerating { get; private set; }
@@ -30,7 +28,7 @@ internal sealed class NotesStudio(FrameworkElement view)
   var choices=registry.RootElement.EnumerateObject().Where(x=>x.Value.GetProperty("enabled").GetBoolean()).Select(x=>new Choice(x.Name,x.Value.GetProperty("nativeName").GetString()!)).ToArray();
   language.ItemsSource=choices;language.DisplayMemberPath="Label";language.SelectedValuePath="Id";language.SelectedValue=registry.RootElement.EnumerateObject().First(x=>x.Value.GetProperty("defaultOutput").GetBoolean()).Name;
   teacher.ItemsSource=choices;teacher.DisplayMemberPath="Label";teacher.SelectedValuePath="Id";teacher.SelectedValue=registry.RootElement.EnumerateObject().First(x=>x.Value.GetProperty("defaultTeacher").GetBoolean()).Name;
-  if(File.Exists(PrefPath))try{var p=JsonSerializer.Deserialize<Preferences>(File.ReadAllText(PrefPath))!;if(new[]{"brief","standard","detailed"}.Contains(p.Detail))detail.SelectedValue=p.Detail;if(choices.Any(c=>c.Id==p.Language))language.SelectedValue=p.Language;images.IsChecked=p.IncludeSlides;model=p.Model;keep.IsChecked=p.KeepRaw;if(choices.Any(c=>c.Id==p.TeacherLanguage))teacher.SelectedValue=p.TeacherLanguage;}catch(JsonException){}
+  if(File.Exists(PrefPath))try{var p=JsonSerializer.Deserialize<Preferences>(File.ReadAllText(PrefPath))!;if(new[]{"brief","standard","detailed"}.Contains(p.Detail))detail.SelectedValue=p.Detail;if(choices.Any(c=>c.Id==p.Language))language.SelectedValue=p.Language;model=p.ModelPreferenceVersion==0&&p.Model=="nvidia/nemotron-3.5-lightning-30b-a3b"?NvidiaNotes.DefaultModel:p.Model;if(choices.Any(c=>c.Id==p.TeacherLanguage))teacher.SelectedValue=p.TeacherLanguage;}catch(JsonException){}
   Button("SavePreferences").Click+=(_,_)=>{Save();status.Text=S("preferencesSaved");};
   Button("KeySetup").Click+=(_,_)=>Settings();
   Button("Transcribe").Click+=async(_,_)=>await TranscribeLesson();
@@ -39,12 +37,12 @@ internal sealed class NotesStudio(FrameworkElement view)
   Button("GeneratePdf").Click+=async(_,_)=>await Generate();
   Button("CancelGeneration").Click+=(_,_)=>running?.Cancel();
   Button("CancelGeneration").IsEnabled=false;
-  sessions.SelectionChanged+=(_,_)=>{((CheckBox)view.FindName("CloudConsent")).IsChecked=false;UpdateSource();};UpdateSource();
+  sessions.SelectionChanged+=(_,_)=>UpdateSource();UpdateSource();
  }
  record Choice(string Id,string Label);
  Button Button(string name)=>(Button)view.FindName(name);
- NotesPreferences Options()=>new((string)detail.SelectedValue,(string)language.SelectedValue,images.IsChecked==true);
- void Save(){Directory.CreateDirectory(KeyVault.Folder);var o=Options();File.WriteAllText(PrefPath+".partial",JsonSerializer.Serialize(new Preferences(o.Detail,o.Language,o.IncludeSlides,model,keep.IsChecked==true,(string)teacher.SelectedValue)));File.Move(PrefPath+".partial",PrefPath,true);}
+ NotesPreferences Options()=>new((string)detail.SelectedValue,(string)language.SelectedValue,true,sessions.SelectedItem is SessionInfo lesson?lesson.Title:null);
+ void Save(){Directory.CreateDirectory(KeyVault.Folder);var o=Options();File.WriteAllText(PrefPath+".partial",JsonSerializer.Serialize(new Preferences(o.Detail,o.Language,true,model,true,(string)teacher.SelectedValue,true,1)));File.Move(PrefPath+".partial",PrefPath,true);}
  void UpdateSource()
  {
   var text=(TextBlock)view.FindName("TranscriptStatus");
@@ -56,7 +54,7 @@ internal sealed class NotesStudio(FrameworkElement view)
    var sources=folder==null?[]:LessonTranscript.Load(folder);
    preview.Text=string.Join("\n\n",sources.Select(s=>s.Label+"\n"+s.Text));
    text.Text=sources.Length>0?S("transcriptReady"):S("transcriptMissing");
-   Button("Transcribe").IsEnabled=running==null&&folder!=null&&sources.Length==0&&sessions.SelectedItem is SessionInfo item&&item.State!="archived";
+   Button("Transcribe").IsEnabled=running==null&&folder!=null&&sessions.SelectedItem is SessionInfo item&&item.State!="archived";
    Button("GeneratePdf").IsEnabled=running==null&&folder!=null;
    Button("OpenPdf").IsEnabled=running==null&&folder!=null&&File.Exists(Path.Combine(folder,"latest-export.json"));
   } catch(Exception e){preview.Text="";text.Text=e.Message;}
@@ -81,19 +79,21 @@ internal sealed class NotesStudio(FrameworkElement view)
    Process.Start(new ProcessStartInfo(path){UseShellExecute=true});
   }catch(Exception e){status.Text=e.Message;}
  }
- async Task EnsureTranscript(string folder,CancellationToken token)
+ async Task EnsureTranscript(string folder,CancellationToken token,bool replace=false)
  {
-  if(LessonTranscript.Load(folder).Length>0)return;
+  if(!replace&&LessonTranscript.Load(folder).Length>0)return;
+  if(!KeyVault.HasSpeechKey)throw new InvalidOperationException(S("speechKeyRequired"));
   if(!File.Exists(Path.Combine(folder,"audio.wav"))&&!File.Exists(Path.Combine(folder,"audio.webm"))&&!File.Exists(Path.Combine(folder,"recording.webm")))await Task.Run(()=>new LectureLens.Storage.LocalStore(LectureLens.Storage.LocalStore.DefaultRoot).Recover(Path.GetFileName(folder)),token);
-  var transcript=await new LocalSpeech().Transcribe(folder,(string)teacher.SelectedValue,new Progress<string>(message=>status.Text=message),token);
+  var transcript=await new LocalSpeech(new GroqSpeech(true)).Transcribe(folder,(string)teacher.SelectedValue,new Progress<string>(message=>status.Text=message),token);
   LessonTranscript.Save(folder,LessonTranscript.Import(transcript));
   UpdateSource();
  }
  async Task TranscribeLesson()
  {
   if(running!=null||Folder is not string folder)return;
+  if(LessonTranscript.Load(folder).Length>0&&MessageBox.Show(S("replaceTranscript"),"LectureLens",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
   BeginJob();
-  try {Save();await EnsureTranscript(folder,running!.Token);status.Text=S("transcriptReady");}
+  try {Save();await EnsureTranscript(folder,running!.Token,true);status.Text=S("transcriptReady");}
   catch(OperationCanceledException){status.Text=S("cancel");}
   catch(Exception e){status.Text=e.Message;}
   finally {EndJob();}
@@ -107,21 +107,16 @@ internal sealed class NotesStudio(FrameworkElement view)
  void EndJob()
  {
   running?.Dispose();running=null;IsGenerating=false;SetEditing(true);
-  ((CheckBox)view.FindName("CloudConsent")).IsChecked=false;
   Button("ImportTranscript").IsEnabled=true;Button("CancelGeneration").IsEnabled=false;sessions.IsEnabled=true;
   UpdateSource();
  } internal static List<NoteSource[]> Parts(IReadOnlyList<NoteSource> sources)
- {
-  var result=new List<NoteSource[]>();var batch=new List<NoteSource>();int count=0;
-  foreach(var s in sources){if(count+s.Text.Length>10000&&batch.Count>0){result.Add(batch.ToArray());batch.Clear();count=0;}batch.Add(s);count+=s.Text.Length;}if(batch.Count>0)result.Add(batch.ToArray());return result;
- }
+ =>SlideTimeline.Parts(sources);
+
  async Task Generate()
  {
   if(running!=null)return;
   var folder=Folder;if(folder==null){status.Text=S("chooseSession");return;}
-  var cloud=((CheckBox)view.FindName("CloudConsent")).IsChecked==true;
-  if(!cloud && !Equals(teacher.SelectedValue,language.SelectedValue)){status.Text=S("offlineLanguageMismatch");return;}
-  if(cloud&&!KeyVault.HasKey){Settings();return;}
+  if(!KeyVault.HasKey){Settings();return;}
   
   BeginJob();
 
@@ -129,20 +124,28 @@ internal sealed class NotesStudio(FrameworkElement view)
   try
   {
    Save();
-   var options=Options();var retain=keep.IsChecked==true;
+   var options=Options();
    await EnsureTranscript(folder,running!.Token);
-   var sources=LessonTranscript.Load(folder);
+   var loaded=LessonTranscript.Load(folder);
+   // Upgrade only equivalent old speech imports, preserving edited/imported text.
+   var speechFile=Path.Combine(folder,"speech-transcript.json");
+   if(loaded.All(s=>s.TimestampBasis==null)&&File.Exists(speechFile)) {
+    var timed=LessonTranscript.Import(speechFile);
+    if(loaded.Select(s=>(s.Id,s.Text)).SequenceEqual(timed.Select(s=>(s.Id,s.Text))))loaded=timed;
+   }
+   var sources=await SlideTimeline.Align(folder,loaded,running.Token);
    var parts=Parts(sources);
-   ITextGenerator generator=cloud?new NvidiaNotes(model,Path.Combine(folder,"notes-cache")):new ExtractiveNotes(((SessionInfo)sessions.SelectedItem).Title);
+   ITextGenerator generator=new NvidiaNotes(model,Path.Combine(folder,"notes-cache"));
    var outputs=new List<StudyNotes>();
    for(int i=0;i<parts.Count;i++)
    {
     status.Text=S("progressPart")+" "+(i+1)+" / "+parts.Count;
     outputs.Add(await generator.Generate(parts[i],options,running.Token));
    }
-   var notes=new StudyNotes(outputs[0].Title,string.Join("\n\n",outputs.Select(n=>n.Overview).Distinct()),outputs.SelectMany(n=>n.Sections).ToArray());
+   var notes=new StudyNotes(options.Topic??outputs[0].Title,outputs.Count==1?outputs[0].Overview:"",outputs.SelectMany(n=>n.Sections).ToArray());
    var destination=Path.GetFullPath(Path.Combine(LectureLens.Storage.LocalStore.DefaultRoot,"..","exports",Path.GetFileName(folder),DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")+"-"+Guid.NewGuid().ToString("N")[..6]));
    Directory.CreateDirectory(destination);
+   await File.WriteAllTextAsync(Path.Combine(destination,"sources.json"),JsonSerializer.Serialize(sources,NvidiaNotes.Json));
    await File.WriteAllTextAsync(Path.Combine(destination,"notes.json"),JsonSerializer.Serialize(notes,NvidiaNotes.Json));
    await File.WriteAllTextAsync(Path.Combine(destination,"preferences.json"),JsonSerializer.Serialize(options));
    var pdf=await new BrowserPdf().Render(notes,sources,options,folder,destination,running.Token);
@@ -150,14 +153,6 @@ internal sealed class NotesStudio(FrameworkElement view)
    File.Move(Path.Combine(folder,"latest-export.json.partial"),Path.Combine(folder,"latest-export.json"),true);
    status.Text=S("done")+" "+pdf;
    Process.Start(new ProcessStartInfo(pdf){UseShellExecute=true});
-   if(!retain&&MessageBox.Show(S("retentionConfirm"),"LectureLens",MessageBoxButton.YesNo,MessageBoxImage.Question)==MessageBoxResult.Yes)
-   {
-    var id=Path.GetFileName(folder);
-    using var store=new LectureLens.Storage.LocalStore(LectureLens.Storage.LocalStore.DefaultRoot);
-    await Task.Run(()=>store.RemoveRaw(id));
-    var items=await Task.Run(store.List);
-    sessions.ItemsSource=items;sessions.SelectedItem=items.FirstOrDefault(s=>s.Id==id);
-   }
   }
   catch(OperationCanceledException){status.Text=S("cancel");}
   catch(Exception e){status.Text=e.Message;}
@@ -168,27 +163,39 @@ internal sealed class NotesStudio(FrameworkElement view)
   foreach(var name in new[]{"MergeRecordings","Refresh","Recover","ViewSlides","Stop","Delete","SavePreferences","KeySetup","RenameLesson","OpenPdf"})
    Button(name).IsEnabled=enabled;
   teacher.IsEnabled=enabled;((TextBox)view.FindName("SearchLessons")).IsEnabled=enabled;
-  detail.IsEnabled=enabled;language.IsEnabled=enabled;images.IsEnabled=enabled;keep.IsEnabled=enabled;
-  ((CheckBox)view.FindName("CloudConsent")).IsEnabled=enabled;
+  detail.IsEnabled=enabled;language.IsEnabled=enabled;
  }
  void Settings()
  {
-  var window=new Window{Title=S("keyTitle"),Width=540,Height=340,Owner=Window.GetWindow(view),WindowStartupLocation=WindowStartupLocation.CenterOwner,ResizeMode=ResizeMode.NoResize};
+  var window=new Window{Title=S("keyTitle"),Width=600,Height=650,Owner=Window.GetWindow(view),WindowStartupLocation=WindowStartupLocation.CenterOwner,ResizeMode=ResizeMode.NoResize};
+  window.SetResourceReference(Window.BackgroundProperty,"PanelBackground");window.SetResourceReference(Window.ForegroundProperty,"AppForeground");window.SetResourceReference(Window.FontFamilyProperty,"AppFont");
   var stack=new StackPanel{Margin=new Thickness(24)};
+  var appearance=AppearanceSettings.Load();
+  stack.Children.Add(new TextBlock{Text=S("themeLabel"),Margin=new Thickness(0,0,0,8)});
+  var themeBox=new ComboBox{ItemsSource=new[]{new Choice("dark",S("darkTheme")),new Choice("light",S("lightTheme"))},DisplayMemberPath="Label",SelectedValuePath="Id",SelectedValue=appearance.Theme};stack.Children.Add(themeBox);
+  stack.Children.Add(new TextBlock{Text=S("fontLabel"),Margin=new Thickness(0,12,0,8)});
+  var fontBox=new ComboBox{ItemsSource=AppearanceSettings.Fonts,SelectedItem=appearance.Font};stack.Children.Add(fontBox);
+  stack.Children.Add(new TextBlock{Text=S("connectionsLabel"),FontSize=16,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,20,0,12)});
   stack.Children.Add(new TextBlock{Text=S("keyLabel"),Margin=new Thickness(0,0,0,8)});
   var password=new PasswordBox{Padding=new Thickness(10)};stack.Children.Add(password);
   stack.Children.Add(new TextBlock{Text=S("modelLabel"),Margin=new Thickness(0,18,0,8)});
-  var modelBox=new TextBox{Text=model,Padding=new Thickness(10)};stack.Children.Add(modelBox);
+  var modelBox=new ComboBox{IsEditable=true,Text=model,Padding=new Thickness(10),ItemsSource=new[]{NvidiaNotes.DefaultModel,"nvidia/nemotron-3.5-lightning-30b-a3b"}};stack.Children.Add(modelBox);
+  stack.Children.Add(new TextBlock{Text=S("speechKeyLabel"),Margin=new Thickness(0,18,0,8)});
+  var speechPassword=new PasswordBox{Padding=new Thickness(10)};stack.Children.Add(speechPassword);
+  stack.Children.Add(new TextBlock{Text=S("speechFreeHint"),TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,0)});
   var feedback=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,10,0,0)};stack.Children.Add(feedback);
   var save=new Button{Content=S("save"),Padding=new Thickness(20,10,20,10),Margin=new Thickness(0,15,0,0)};stack.Children.Add(save);
   save.Click+=(_,_)=>{
    try {
     if(string.IsNullOrWhiteSpace(modelBox.Text)||modelBox.Text.Length>180)throw new InvalidDataException("Invalid model ID");
+    var selectedAppearance=new AppearanceSettings.Choice((string)themeBox.SelectedValue,(string)fontBox.SelectedItem);
+    AppearanceSettings.Save(selectedAppearance);AppearanceSettings.Apply(Application.Current,selectedAppearance);
     if(password.Password.Length>0)KeyVault.Save(password.Password);
-    model=modelBox.Text.Trim();Save();password.Clear();window.Close();status.Text=S("keySaved");
+    if(speechPassword.Password.Length>0)KeyVault.Save(speechPassword.Password,true);
+    model=modelBox.Text.Trim();Save();password.Clear();speechPassword.Clear();window.Close();status.Text=S("keySaved");
    }catch(Exception e){feedback.Text=e.Message;}
   };
-  window.Content=stack;window.ShowDialog();
+  window.Content=new ScrollViewer{Content=stack,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};window.ShowDialog();
  }
 }
 

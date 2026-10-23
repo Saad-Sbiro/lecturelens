@@ -24,11 +24,13 @@ internal sealed class SpeechAssets
  internal string Vad=>Path.Combine(root,"silero.bin");
  internal string Decoder=>Directory.EnumerateFiles(Path.Combine(root,"decoder"),"ffmpeg.exe",SearchOption.AllDirectories).Single();
  internal string Version=>string.Join("/",new[]{"small","engine","decoder","vad"}.Select(k=>assets[k].Sha256));
- internal async Task EnsureReady(IProgress<string>? progress,CancellationToken cancel)
+ internal Task EnsureReady(IProgress<string>? progress,CancellationToken cancel)=>Ensure(progress,cancel,false);
+ internal Task EnsureDecoder(IProgress<string>? progress,CancellationToken cancel)=>Ensure(progress,cancel,true);
+ async Task Ensure(IProgress<string>? progress,CancellationToken cancel,bool decoderOnly)
  {
   Directory.CreateDirectory(root);
   using var http=new HttpClient{Timeout=TimeSpan.FromMinutes(30)};
-  foreach(var key in new[]{"engine","small","vad","decoder"})
+  foreach(var key in decoderOnly?new[]{"decoder"}:new[]{"engine","small","vad","decoder"})
   {
    cancel.ThrowIfCancellationRequested();var asset=assets[key];var path=Path.Combine(root,asset.File);
    if(!await Matches(path,asset.Sha256,cancel))
@@ -54,7 +56,7 @@ internal sealed class SpeechAssets
     }
    }
   }
-  if(!File.Exists(Engine)||!File.Exists(Decoder))throw new FileNotFoundException("Speech setup is incomplete. Retry transcription to repair it.");
+  if((!decoderOnly&&!File.Exists(Engine))||!File.Exists(Decoder))throw new FileNotFoundException("Speech setup is incomplete. Retry transcription to repair it.");
  }
  static async Task<bool> Matches(string path,string expected,CancellationToken cancel)
  {
