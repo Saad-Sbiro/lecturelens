@@ -23,6 +23,7 @@ internal sealed class NotesStudio(FrameworkElement view)
  string? Folder=>sessions.SelectedItem is SessionInfo s&&s.State!="recording"&&s.Problems.Length==0?Path.Combine(LectureLens.Storage.LocalStore.DefaultRoot,s.Id):null;
  internal void Attach()
  {
+  Notifications.Attach(view);
   detail.ItemsSource=new[]{new Choice("brief",S("brief")),new Choice("standard",S("standard")),new Choice("detailed",S("detailed"))};detail.DisplayMemberPath="Label";detail.SelectedValuePath="Id";detail.SelectedValue="standard";
   using var registry=JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"languages.json")));
   var choices=registry.RootElement.EnumerateObject().Where(x=>x.Value.GetProperty("enabled").GetBoolean()).Select(x=>new Choice(x.Name,x.Value.GetProperty("nativeName").GetString()!)).ToArray();
@@ -92,6 +93,7 @@ internal sealed class NotesStudio(FrameworkElement view)
  {
   if(running!=null||Folder is not string folder)return;
   if(LessonTranscript.Load(folder).Length>0&&MessageBox.Show(S("replaceTranscript"),"LectureLens",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes)return;
+  if(!KeyVault.HasSpeechKey){Connections(true);return;}
   BeginJob();
   try {Save();await EnsureTranscript(folder,running!.Token,true);status.Text=S("transcriptReady");}
   catch(OperationCanceledException){status.Text=S("cancel");}
@@ -116,7 +118,7 @@ internal sealed class NotesStudio(FrameworkElement view)
  {
   if(running!=null)return;
   var folder=Folder;if(folder==null){status.Text=S("chooseSession");return;}
-  if(!KeyVault.HasKey){Settings();return;}
+  if(!KeyVault.HasKey || (!KeyVault.HasSpeechKey && LessonTranscript.Load(folder).Length==0)){Connections();return;}
   
   BeginJob();
 
@@ -151,12 +153,13 @@ internal sealed class NotesStudio(FrameworkElement view)
    var pdf=await new BrowserPdf().Render(notes,sources,options,folder,destination,running.Token);
    File.WriteAllText(Path.Combine(folder,"latest-export.json.partial"),JsonSerializer.Serialize(new{path=pdf,createdAt=DateTimeOffset.UtcNow}));
    File.Move(Path.Combine(folder,"latest-export.json.partial"),Path.Combine(folder,"latest-export.json"),true);
-   status.Text=S("done")+" "+pdf;
-   Process.Start(new ProcessStartInfo(pdf){UseShellExecute=true});
+   status.Text="";
+   EndJob();
+   Notifications.PdfReady(view,pdf);
   }
   catch(OperationCanceledException){status.Text=S("cancel");}
   catch(Exception e){status.Text=e.Message;}
-  finally{EndJob();}
+  finally{if(running!=null)EndJob();}
  }
  void SetEditing(bool enabled)
  {
@@ -167,14 +170,32 @@ internal sealed class NotesStudio(FrameworkElement view)
  }
  void Settings()
  {
-  var window=new Window{Title=S("keyTitle"),Width=600,Height=650,Owner=Window.GetWindow(view),WindowStartupLocation=WindowStartupLocation.CenterOwner,ResizeMode=ResizeMode.NoResize};
-  window.SetResourceReference(Window.BackgroundProperty,"PanelBackground");window.SetResourceReference(Window.ForegroundProperty,"AppForeground");window.SetResourceReference(Window.FontFamilyProperty,"AppFont");
-  var stack=new StackPanel{Margin=new Thickness(24)};
+  var stack=new StackPanel();
+  stack.Children.Add(new TextBlock{Text=S("keyTitle"),FontSize=24,FontWeight=FontWeights.Bold,Margin=new Thickness(0,0,0,20)});
   var appearance=AppearanceSettings.Load();
   stack.Children.Add(new TextBlock{Text=S("themeLabel"),Margin=new Thickness(0,0,0,8)});
   var themeBox=new ComboBox{ItemsSource=new[]{new Choice("dark",S("darkTheme")),new Choice("light",S("lightTheme"))},DisplayMemberPath="Label",SelectedValuePath="Id",SelectedValue=appearance.Theme};stack.Children.Add(themeBox);
-  stack.Children.Add(new TextBlock{Text=S("fontLabel"),Margin=new Thickness(0,12,0,8)});
+  stack.Children.Add(new TextBlock{Text=S("fontLabel"),Margin=new Thickness(0,16,0,8)});
   var fontBox=new ComboBox{ItemsSource=AppearanceSettings.Fonts,SelectedItem=appearance.Font};stack.Children.Add(fontBox);
+  var feedback=new TextBlock{Margin=new Thickness(0,12,0,0)};stack.Children.Add(feedback);
+  var actions=new WrapPanel{Margin=new Thickness(0,20,0,0)};stack.Children.Add(actions);
+  var save=new Button{Content=S("save"),Style=(Style)view.FindResource("Primary")};actions.Children.Add(save);
+  var cancel=new Button{Content=S("cancelGeneration")};actions.Children.Add(cancel);
+  var dialog=new InAppDialog(view,stack,520);dialog.Dismiss=dialog.Close;
+  cancel.Click+=(_,_)=>dialog.Close();
+  save.Click+=(_,_)=>{
+   try {
+    var choice=new AppearanceSettings.Choice((string)themeBox.SelectedValue,(string)fontBox.SelectedItem);
+    AppearanceSettings.Save(choice);AppearanceSettings.Apply(Application.Current,choice);
+    dialog.Close();status.Text=S("preferencesSaved");
+   }catch(Exception e){feedback.Text=e.Message;}
+  };
+ }
+ void Connections(bool speechOnly=false)
+ {
+  var window=new Window{Title=S("connectionsLabel"),Width=600,Height=530,Owner=Window.GetWindow(view),WindowStartupLocation=WindowStartupLocation.CenterOwner,ResizeMode=ResizeMode.NoResize};
+  window.SetResourceReference(Window.BackgroundProperty,"PanelBackground");window.SetResourceReference(Window.ForegroundProperty,"AppForeground");window.SetResourceReference(Window.FontFamilyProperty,"AppFont");
+  var stack=new StackPanel{Margin=new Thickness(24)};
   stack.Children.Add(new TextBlock{Text=S("connectionsLabel"),FontSize=16,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,20,0,12)});
   stack.Children.Add(new TextBlock{Text=S("keyLabel"),Margin=new Thickness(0,0,0,8)});
   var password=new PasswordBox{Padding=new Thickness(10)};stack.Children.Add(password);
@@ -182,14 +203,15 @@ internal sealed class NotesStudio(FrameworkElement view)
   var modelBox=new ComboBox{IsEditable=true,Text=model,Padding=new Thickness(10),ItemsSource=new[]{NvidiaNotes.DefaultModel,"nvidia/nemotron-3.5-lightning-30b-a3b"}};stack.Children.Add(modelBox);
   stack.Children.Add(new TextBlock{Text=S("speechKeyLabel"),Margin=new Thickness(0,18,0,8)});
   var speechPassword=new PasswordBox{Padding=new Thickness(10)};stack.Children.Add(speechPassword);
+  if(speechOnly)foreach(var item in stack.Children.Cast<UIElement>().Skip(1).Take(4))item.Visibility=Visibility.Collapsed;
   stack.Children.Add(new TextBlock{Text=S("speechFreeHint"),TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,0)});
   var feedback=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,10,0,0)};stack.Children.Add(feedback);
+  var help=new Button{Content=S("getGroqKey"),Margin=new Thickness(0,12,0,0)};stack.Children.Add(help);
+  help.Click+=(_,_)=>{try{Process.Start(new ProcessStartInfo("https://console.groq.com/keys"){UseShellExecute=true});}catch(Exception e){feedback.Text=e.Message;}};
   var save=new Button{Content=S("save"),Padding=new Thickness(20,10,20,10),Margin=new Thickness(0,15,0,0)};stack.Children.Add(save);
   save.Click+=(_,_)=>{
    try {
     if(string.IsNullOrWhiteSpace(modelBox.Text)||modelBox.Text.Length>180)throw new InvalidDataException("Invalid model ID");
-    var selectedAppearance=new AppearanceSettings.Choice((string)themeBox.SelectedValue,(string)fontBox.SelectedItem);
-    AppearanceSettings.Save(selectedAppearance);AppearanceSettings.Apply(Application.Current,selectedAppearance);
     if(password.Password.Length>0)KeyVault.Save(password.Password);
     if(speechPassword.Password.Length>0)KeyVault.Save(speechPassword.Password,true);
     model=modelBox.Text.Trim();Save();password.Clear();speechPassword.Clear();window.Close();status.Text=S("keySaved");

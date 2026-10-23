@@ -4,7 +4,8 @@ import type { CaptureSession } from '../ports/capture';
 import { NativeClient } from './native-client';
 import text from '../../config/browser-ui.json';
 import { visualConfig } from '../../config/visual';
-import { SlideSampler } from './slide-sampler';
+import { SlideSampler, canvasFrame, gray } from './slide-sampler';
+import { AutoRegion } from './auto-region';
 import { fullCrop, validCrop, type Crop } from '../domain/slides';
 import type { CropMode } from '../domain/visual-policy';
 
@@ -18,8 +19,33 @@ let started = 0, eventIndex = 0;
 let crop: Crop = fullCrop, cropConfirmed = false, cropConfidence = 0;
 let cropMode: CropMode = 'manual';
 let sampler: SlideSampler | undefined;
+let autoRegion: AutoRegion | undefined, vision: NativeClient | undefined;
+function disableAuto() { autoRegion?.close(); autoRegion = undefined; vision?.close(); vision = undefined; }
+function enableAuto() {
+  disableAuto();
+  vision = new NativeClient();
+  const connection = vision;
+  autoRegion = new AutoRegion(data => connection.call('detectRegion', { data, consent: true }));
+  crop = fullCrop; cropConfirmed = true;
+}
+function updateAuto() {
+  if (!autoRegion || video.readyState < 2) return;
+  try {
+    const signature = gray(canvasFrame(video, fullCrop, 160, 90));
+    // Full frame coordinates are preserved. Reduce JPEG quality, never crop the upload.
+    autoRegion.observe(signature, () => {
+      const frame = canvasFrame(video, fullCrop, video.videoWidth, video.videoHeight);
+      let quality = .8, data = frame.toDataURL('image/jpeg', quality).split(',')[1];
+      while (data.length > 850000 && quality > .3) { quality -= .1; data = frame.toDataURL('image/jpeg', quality).split(',')[1]; }
+      if (data.length > 850000) throw new Error('Vision frame too large');
+      return data;
+    }, performance.now());
+    if (state === 'previewing') crop = autoRegion.region.crop;
+  } catch { disableAuto(); crop = fullCrop; }
+}
 const badge = (value: string) => { void chrome.runtime.sendMessage({ target: 'background', op: 'badge', text: value }).catch(() => {}); };
 async function release() {
+  disableAuto();
   clearInterval(timer); timer = undefined;
   stream?.getTracks().forEach(track => track.stop()); stream = undefined; video.srcObject = null;
   await meter?.close(); meter = undefined;
@@ -81,10 +107,12 @@ async function preview(streamId: string) {
     meter = new SoundMeter(stream); await meter.start();
     stream.getTracks().forEach(track => track.addEventListener('ended', () => { void stop('source-ended'); }, { once: true }));
     state = 'previewing'; badge('VIEW');
+    enableAuto(); updateAuto();
     let tick = 0;
     timer = setInterval(() => {
       level = meter?.level() ?? 0;
       if (level > 0.002) recentAudio = performance.now();
+      if (tick % 10 === 0 && ['previewing', 'recording'].includes(state)) updateAuto();
       if (state === 'recording') sampler?.tick();
       if (++tick % 10 === 0 && !heartbeatBusy && native?.connected && state !== 'stopping') {
         heartbeatBusy = true;
@@ -105,15 +133,17 @@ async function command(message: { op: string; streamId?: string; reason?: string
       canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height);
       image = canvas.toDataURL('image/jpeg', message.largePreview ? 0.94 : 0.65);
     }
-    return { state, error, sourceTitle, packets, level, image, crop: sampler?.currentCrop ?? crop, cropMode, visualStatus: sampler?.status, cropConfidence, cropConfirmed, slides: sampler?.saved ?? 0, elapsedMs: started ? performance.now() - started : 0 };
+    return { state, error, sourceTitle, packets, level, image, crop: sampler?.currentCrop ?? crop, cropMode, visualStatus: autoRegion?.region.reason ?? sampler?.status, cropConfidence, cropConfirmed, slides: sampler?.saved ?? 0, elapsedMs: started ? performance.now() - started : 0 };
   }
   if (message.op === 'preview') { sourceTitle = message.title ?? text.selected; return preview(message.streamId!); }
+  if (message.op === 'autoCrop') { if (state !== 'previewing') throw new Error(text.sourceLocked); enableAuto(); updateAuto(); return; }
   if (message.op === 'cropMode') {
     if (state !== 'previewing' || !['auto', 'manual'].includes(message.mode!)) throw new Error(text.invalidCrop);
     cropMode = message.mode!; cropConfirmed = cropMode === 'auto'; return;
   }
   if (message.op === 'crop') {
     if (state !== 'previewing' || !message.crop || !validCrop(message.crop)) throw new Error(text.invalidCrop);
+    disableAuto();
     crop = message.crop; cropMode = 'manual'; cropConfirmed = true; return;
   }
   if (message.op === 'start') {
@@ -126,7 +156,8 @@ async function command(message: { op: string; streamId?: string; reason?: string
     started = performance.now(); eventIndex = 0;
     try {
       const clock = () => performance.now() - started;
-      sampler = new SlideSampler(video, crop, native!, id, clock, e => { error = String(e); void stop('visual-error'); }, cropMode);
+      sampler = new SlideSampler(video, crop, native!, id, clock, e => { error = String(e); void stop('visual-error'); }, cropMode,
+        autoRegion ? () => autoRegion?.region ?? { crop: fullCrop, reason: 'auto-unavailable', review: true } : undefined);
       const audioStream = new MediaStream(stream!.getAudioTracks());
       session = await new BrowserMediaSource(audioStream, mime, { now: clock }).start({ signal: new AbortController().signal, timeoutMs: 15000 });
       state = 'recording'; badge('REC'); pump = save();

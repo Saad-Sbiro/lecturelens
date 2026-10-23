@@ -16,15 +16,19 @@ internal static class UiChecks
         var app = new Application();
         using var strings = JsonDocument.Parse(File.ReadAllText("config/native-ui.en.json"));
         foreach (var item in strings.RootElement.EnumerateObject()) app.Resources[item.Name] = item.Value.GetString();
+        AppearanceSettings.Apply(app,new AppearanceSettings.Choice("dark",AppearanceSettings.DefaultFont));
         var xaml = File.ReadAllText("src/native/Desktop/MainWindow.xaml").Replace("LectureLens;component", "LectureLens.MergeChecks;component");
         var view = (FrameworkElement)XamlReader.Parse(xaml);
         var owner = new Window { Content = view, Width = 1280, Height = 900 }; owner.Show();
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         Exception? failure = null;
+        var mergeFrame = new DispatcherFrame();
         timer.Tick += (_, _) => {
-            timer.Stop(); var dialog = app.Windows.Cast<Window>().Single(w => w != owner);
+            timer.Stop(); var overlay = ((Grid)view).Children.OfType<Grid>().Single(g => g.Name == "DialogOverlay");
+            var dialog = owner;
             try {
-                var layout = (DockPanel)dialog.Content;
+                if (app.Windows.Count != 1) throw new Exception("Merge opened another window");
+                var layout = (DockPanel)((Border)overlay.Children[0]).Child;
                 var panel = (StackPanel)layout.Children.OfType<ScrollViewer>().Single().Content;
                 var footer = layout.Children.OfType<StackPanel>().Single();
                 var buttons = panel.Children.OfType<Button>().Concat(panel.Children.OfType<Panel>().Concat(footer.Children.OfType<Panel>()).SelectMany(p => p.Children.OfType<Button>())).ToArray();
@@ -44,11 +48,31 @@ internal static class UiChecks
                 Console.WriteLine("PASS native merge selection, reorder, limits and screenshot");
             }
             catch (Exception e) { failure = e; }
-            finally { dialog.Close(); }
+            finally {
+                overlay.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(owner), 0, System.Windows.Input.Key.Escape) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+                mergeFrame.Continue = false;
+            }
         };
         timer.Start();
         var lessons = new[] { "Part A", "Part B", "Part C" }.Select(title => new SessionInfo(Guid.NewGuid().ToString(), "2026-10-23T10:00:00Z", "finished", 1, 32000, [], Title: title)).ToArray();
-        MergeWindow.Show(view, lessons);
+        var mergeTask = MergeWindow.Show(view, lessons);
+        Dispatcher.PushFrame(mergeFrame);
+        if (!mergeTask.IsCompleted || mergeTask.Result != null) throw new Exception("Merge dismiss failed");
+        Notifications.Attach(view);
+        var toast = (Border)view.FindName("NotificationToast");
+        if (toast.Visibility != Visibility.Collapsed) throw new Exception("Idle notification visible");
+        ((TextBlock)view.FindName("SessionMessage")).Text = "Fixture saved";
+        if (toast.Visibility != Visibility.Visible) throw new Exception("Notification did not appear");
+        ((Button)view.FindName("DismissNotification")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        if (toast.Visibility != Visibility.Collapsed) throw new Exception("Notification dismiss failed");
+        Notifications.PdfReady(view,Path.GetFullPath("artifacts/fixture.pdf"));
+        var pdfOverlay = ((Grid)view).Children.OfType<Grid>().Single(g => g.Name == "DialogOverlay");
+        var pdfPanel = (StackPanel)((Border)pdfOverlay.Children[0]).Child;
+        var pdfActions = pdfPanel.Children.OfType<WrapPanel>().Single().Children.OfType<Button>().ToArray();
+        if (app.Windows.Count != 1 || !pdfActions.Any(b => Equals(b.Content,app.Resources["openInBrowser"])) || !pdfActions.Any(b => Equals(b.Content,app.Resources["openFileLocation"]))) throw new Exception("PDF choices missing");
+        pdfActions.Single(b => Equals(b.Content,app.Resources["close"])).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        if (((Grid)view).Children.OfType<Grid>().Any(g => g.Name == "DialogOverlay")) throw new Exception("PDF dismiss failed");
+        Console.WriteLine("PASS notifications and PDF completion choices stay inside the app");
         var folder = Path.GetFullPath("artifacts/slide-review-check");
         Directory.CreateDirectory(Path.Combine(folder, "slides"));
         var jpeg = new JpegBitmapEncoder();

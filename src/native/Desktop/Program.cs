@@ -32,7 +32,7 @@ public static class Program
         WindowChrome.SetWindowChrome(window, new WindowChrome { CaptionHeight = 0, ResizeBorderThickness = new Thickness(7), GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(0), UseAeroCaptionButtons = false });
         window.SetResourceReference(Window.BackgroundProperty, "AppBackground");
         WindowBounds.Attach(window);
-        window.Icon = BitmapFrame.Create(new Uri("pack://application:,,,/LectureLens;component/assets/logomark.png"));
+        window.Icon = TaskbarIcon.Create();
 
         int reloads = 0;
         bool fullScreen = false;
@@ -83,7 +83,7 @@ public static class Program
         watcher.Renamed += (_, _) => Changed();
         watcher.EnableRaisingEvents = Environment.GetEnvironmentVariable("LECTURELENS_XAML") != null;
         try { Reload(); }
-        catch (Exception e) { MessageBox.Show(e.Message, "LectureLens"); return 1; }
+        catch (Exception e) { if (smoke) { Directory.CreateDirectory("artifacts"); File.WriteAllText("artifacts/native-smoke-error.txt", e.ToString()); } else MessageBox.Show(e.Message, "LectureLens"); return 1; }
         if (smoke) window.ContentRendered += async (_, _) =>
         {
             try
@@ -102,6 +102,15 @@ public static class Program
                 if (!fullScreen || ((Grid)window.Content).RowDefinitions[0].Height.Value != 0) throw new Exception("F11 full-screen entry failed");
                 ToggleFullScreen();
                 if (fullScreen || ((Grid)window.Content).RowDefinitions[0].Height.Value != 40) throw new Exception("F11 full-screen exit failed");
+                var shell = (Grid)window.Content;
+                ((Button)shell.FindName("KeySetup")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                var settingsOverlay = shell.Children.OfType<Grid>().Single(g => g.Name == "DialogOverlay");
+                var settingsPanel = (StackPanel)((Border)settingsOverlay.Children[0]).Child;
+                if (settingsPanel.Children.OfType<PasswordBox>().Any() || settingsPanel.Children.OfType<ComboBox>().Count() != 2)
+                    throw new Exception("Settings must contain appearance controls without API keys");
+                settingsPanel.Children.OfType<WrapPanel>().Single().Children.OfType<Button>()
+                    .Single(b => Equals(b.Content, app.Resources["cancelGeneration"])).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                if (shell.Children.OfType<Grid>().Any(g => g.Name == "DialogOverlay")) throw new Exception("Settings did not close");
                 window.UpdateLayout();
                 var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
                 bitmap.Render(window);

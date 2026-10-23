@@ -3,12 +3,12 @@ import { difference, SlideIndex, suggestCrop, validCrop, type Crop, fullCrop } f
 import type { NativeClient } from './native-client';
 import { CropTracker, overlap, assessContent, type CropMode } from '../domain/visual-policy';
 
-function canvasFrame(video: HTMLVideoElement, crop: Crop, width: number, height: number) {
+export function canvasFrame(video: HTMLVideoElement, crop: Crop, width: number, height: number) {
   const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
   canvas.getContext('2d')!.drawImage(video, crop.x * video.videoWidth, crop.y * video.videoHeight, crop.width * video.videoWidth, crop.height * video.videoHeight, 0, 0, width, height);
   return canvas;
 }
-function gray(canvas: HTMLCanvasElement) {
+export function gray(canvas: HTMLCanvasElement) {
   const rgba = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
   return Uint8Array.from({ length: canvas.width * canvas.height }, (_, i) => Math.round(0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2]));
 }
@@ -30,7 +30,7 @@ export class SlideSampler {
   readonly tracker: CropTracker;
   get currentCrop() { return this.crop; }
   status = 'waiting-for-sample';
-  constructor(private video: HTMLVideoElement, private crop: Crop, private host: NativeClient, private id: string, private clock: () => number, private failed: (e: unknown) => void, mode: CropMode = 'manual') {
+  constructor(private video: HTMLVideoElement, private crop: Crop, private host: NativeClient, private id: string, private clock: () => number, private failed: (e: unknown) => void, mode: CropMode = 'manual', private regionProvider?: () => { crop: Crop; reason: string; review: boolean }) {
     if (!validCrop(crop)) throw new Error('Invalid slide crop');
     this.dimensions = `${video.videoWidth}:${video.videoHeight}`;
     this.tracker = new CropTracker(crop, mode);
@@ -71,7 +71,7 @@ export class SlideSampler {
         if (Array.isArray(hints) && hints[0] && validCrop(hints[0])) proposal = { crop: hints[0], confidence: 0.8 };
       } catch { /* No DOM access: retain a review candidate, never stop audio. */ }
     }
-    const region = this.tracker.observe(proposal);
+    const region = this.regionProvider?.() ?? this.tracker.observe(proposal);
     this.crop = region.crop; this.status = region.reason;
     await this.log(atMs, region.reason);
     const signature = gray(canvasFrame(this.video, this.crop, config.compareWidth, config.compareHeight));

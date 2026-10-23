@@ -21,7 +21,7 @@ internal sealed class SessionPanel(FrameworkElement view)
         ((Button)view.FindName("MergeRecordings")).Click += async (_, _) => await Run(async () => {
             if (NotesStudio.IsGenerating) return;
             var lessons = await Task.Run(store.List);
-            var merged = MergeWindow.Show(view, lessons);
+            var merged = await MergeWindow.Show(view, lessons);
             if (merged != null) { selectionId = merged; sessions.SelectedItem = null; await Refresh(); message.Text = (string)view.FindResource("mergeDone"); }
         });
         ((Button)view.FindName("ViewSlides")).Click += async (_, _) => await Run(() =>
@@ -51,7 +51,7 @@ internal sealed class SessionPanel(FrameworkElement view)
         {
             if (sessions.SelectedItem is not SessionInfo selected) return;
             if (MessageBox.Show((string)view.FindResource("deleteConfirm"), "LectureLens", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-            await Task.Run(() => store.Delete(selected.Id)); await Refresh();
+            await Task.Run(() => store.Delete(selected.Id)); await Refresh(); message.Text = (string)view.FindResource("lessonDeleted");
         });
         ((Button)view.FindName("ExtensionFolder")).Click += (_, _) =>
         {

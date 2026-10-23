@@ -51,7 +51,9 @@ internal sealed class GroqSpeech(bool audioConsent, HttpClient? injected = null)
     noSpeech = s.TryGetProperty("no_speech_prob", out var probability) ? probability.GetDouble() : 0,
     avgLogprob = s.TryGetProperty("avg_logprob", out var logProbability) ? logProbability.GetDouble() : (double?)null
    }).ToArray();
-   await File.WriteAllTextAsync(output + ".json", JsonSerializer.Serialize(new { transcription = entries }), cancel);
+   await File.WriteAllTextAsync(output + ".json.partial", JsonSerializer.Serialize(new { transcription = entries }), cancel);
+   cancel.ThrowIfCancellationRequested();
+   File.Move(output + ".json.partial", output + ".json", true);
    return;
   }
  }

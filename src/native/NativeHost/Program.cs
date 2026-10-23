@@ -36,6 +36,9 @@ internal static partial class Program
                     switch (op)
                     {
                         case "hello": value = new { version = 1, freeBytes = store.FreeBytes() }; break;
+                        case "detectRegion" when !test:
+                            if (active != null || !request.GetProperty("consent").GetBoolean()) throw new InvalidDataException("Vision needs a separate connection and image consent");
+                            value = GeminiVision.Detect(request.GetProperty("data").GetString()!).GetAwaiter().GetResult(); break;
                         case "create":
                             if (!request.GetProperty("consent").GetBoolean()) throw new InvalidDataException("Consent required");
                             if (store.FreeBytes() < 3136870912) throw new IOException("Not enough free disk space for recording and export");

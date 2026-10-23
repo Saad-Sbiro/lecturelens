@@ -86,6 +86,6 @@
    <TextBlock Text="{DynamicResource scope}" Foreground="{DynamicResource AppMuted}" FontSize="10" Margin="0,10,0,0"/>
   </StackPanel></ScrollViewer>
  </Border>
- <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Background="{DynamicResource RailBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,1,0,0" Padding="18,10"><DockPanel><Ellipse DockPanel.Dock="Left" Fill="{DynamicResource Accent}" Width="6" Height="6" Margin="0,0,10,0" VerticalAlignment="Center"/><TextBlock x:Name="SessionMessage" Text="{DynamicResource readyStatus}" Foreground="{DynamicResource AppMuted}" FontSize="11" MaxHeight="66" TextTrimming="CharacterEllipsis"/></DockPanel></Border>
+ <Border x:Name="NotificationToast" Visibility="Collapsed" Panel.ZIndex="50" Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Right" MaxWidth="620" Margin="24" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="12" Padding="16,12"><DockPanel><Button x:Name="DismissNotification" DockPanel.Dock="Right" Content="&#xD7;" ToolTip="{DynamicResource close}" Style="{StaticResource Quiet}" Margin="12,0,0,0" Padding="8,2"/><Ellipse DockPanel.Dock="Left" Fill="{DynamicResource Accent}" Width="6" Height="6" Margin="0,0,10,0" VerticalAlignment="Center"/><TextBlock x:Name="SessionMessage" Text="" Foreground="{DynamicResource AppForeground}" FontSize="12" MaxHeight="180" TextWrapping="Wrap"/></DockPanel></Border>
 </Grid>
 

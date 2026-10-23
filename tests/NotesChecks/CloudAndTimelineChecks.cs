@@ -11,6 +11,7 @@ internal static class CloudAndTimelineChecks
 {
  internal static async Task Run(string root)
  {
+  await TimestampChecks.Run(root);
   static void Check(bool ok,string label){if(!ok)throw new Exception(label);Console.WriteLine("PASS "+label);}
   var wav=Path.Combine(root,"chunk.wav");await LocalSpeech.WriteWav(wav,new byte[32000],CancellationToken.None);
   var handler=new SpeechHandler();using var http=new HttpClient(handler);var output=Path.Combine(root,"cloud");

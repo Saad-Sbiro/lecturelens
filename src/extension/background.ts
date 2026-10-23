@@ -58,6 +58,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       } finally { choosing = false; }
     }
     if (message.op === 'crop') return offscreen('crop', { crop: message.crop });
+    if (message.op === 'autoCrop') return offscreen('autoCrop');
     if (message.op === 'cropMode') return offscreen('cropMode', { mode: message.mode });
     if (['status', 'start', 'pause', 'stop'].includes(message.op)) return offscreen(message.op);
     throw new Error('Unsupported operation');

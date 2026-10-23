@@ -3,6 +3,9 @@
  <ItemGroup>
   <ProjectReference Include="../../src/native/Storage/Storage.csproj"/>
   <Compile Include="../../src/native/Desktop/Adapters/*.cs" Link="Adapters/%(Filename)%(Extension)"/>
+  <Compile Include="../../src/native/Desktop/InAppDialog.cs" Link="InAppDialog.cs"/>
+  <Compile Include="../../src/native/Desktop/Notifications.cs" Link="Notifications.cs"/>
+  <Compile Include="../../src/native/Desktop/AppearanceSettings.cs" Link="AppearanceSettings.cs"/>
   <Compile Include="../../src/native/Desktop/MergeWindow.cs" Link="MergeWindow.cs"/>
   <Compile Include="../../src/native/Desktop/SlideSelection.cs" Link="SlideSelection.cs"/>
   <Compile Include="../../src/native/Desktop/SlideReviewWindow.cs" Link="SlideReviewWindow.cs"/>

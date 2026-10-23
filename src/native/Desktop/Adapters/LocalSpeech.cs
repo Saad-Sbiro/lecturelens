@@ -47,10 +47,18 @@ internal sealed class LocalSpeech
      var wav=stem+".wav";
      try
      {
-      await WriteWav(wav,buffer.AsMemory(0,count),cancel);
-      await runtime.TranscribeChunk(wav,stem,speechCode,stem+".log",cancel);
-      using var result=JsonDocument.Parse(await File.ReadAllTextAsync(stem+".json",cancel));
-      part=Normalize(result.RootElement,duration,offset,language);
+      // A provider response can survive a failed normalization or checkpoint write.
+      // Reuse it under this audio/model/language fingerprint instead of uploading twice.
+      if(File.Exists(stem+".json"))try {
+       using var saved=JsonDocument.Parse(await File.ReadAllTextAsync(stem+".json",cancel));
+       part=Normalize(saved.RootElement,duration,offset,language);
+      }catch(Exception e) when(e is JsonException or InvalidDataException or KeyNotFoundException or InvalidOperationException or FormatException){}
+      if(part==null) {
+       await WriteWav(wav,buffer.AsMemory(0,count),cancel);
+       await runtime.TranscribeChunk(wav,stem,speechCode,stem+".log",cancel);
+       using var result=JsonDocument.Parse(await File.ReadAllTextAsync(stem+".json",cancel));
+       part=Normalize(result.RootElement,duration,offset,language);
+      }
       await Atomic(checkpoint,JsonSerializer.Serialize(part,Json),cancel);
      }
      finally{if(File.Exists(wav))File.Delete(wav);}
@@ -77,10 +85,17 @@ internal sealed class LocalSpeech
   var output=new List<Segment>();foreach(var s in entries.EnumerateArray())
   {
    var start=s.GetProperty("offsets").GetProperty("from").GetDouble()/1000;var end=s.GetProperty("offsets").GetProperty("to").GetDouble()/1000;var text=s.GetProperty("text").GetString()?.Trim()??"";
-   if(!double.IsFinite(start)||!double.IsFinite(end)||start<0||end<start||end>duration+1)throw new InvalidDataException("Speech worker returned an invalid timestamp.");
+   // Models can overrun the final chunk. Keep overlapping speech, but never
+   // assign words wholly outside the recording to a fabricated point in time.
+   if(!double.IsFinite(start)||!double.IsFinite(end)||end<=start||end<=0||start>=duration) {
+    output.Add(new(offset,offset,text,language,null,false,"invalid-or-outside-audio-timestamp"));continue;
+   }
+   var clipped=start<0||end>duration;
    var silent=s.TryGetProperty("noSpeech",out var ns)&&ns.ValueKind==JsonValueKind.Number&&ns.GetDouble()>0.8;
    double? confidence=null;if(s.TryGetProperty("avgLogprob",out var lp)&&lp.ValueKind==JsonValueKind.Number&&double.IsFinite(lp.GetDouble()))confidence=Math.Clamp(Math.Exp(lp.GetDouble()),0,1);
-   output.Add(new(offset+Math.Min(start,duration),offset+Math.Min(end,duration),text,language,confidence,text.Length>0&&!silent,silent?"likely-no-speech":text.Length>0?"transcribed-unreviewed":"empty-segment"));
+   var reason=silent?"likely-no-speech":text.Length>0?"transcribed-unreviewed":"empty-segment";
+   if(clipped)reason+="; timestamp-clipped-to-audio-review-required";
+   output.Add(new(offset+Math.Clamp(start,0,duration),offset+Math.Clamp(end,0,duration),text,language,confidence,text.Length>0&&!silent,reason));
   }
   return output.ToArray();
  }

@@ -151,3 +151,13 @@ Decision: use Windows' installed Segoe UI Variable Text when available, with onl
 ## 2026-10-23 — Local vector icon set
 
 Use a small checked-in subset of Tabler Icons for window, lesson and slide-review actions. The source SVGs and MIT license are stored in `src/assets/icons/tabler`; production WPF paths are local and require no font, package, CDN or runtime network request. Tabler uses a consistent 24×24, two-pixel stroke system, so icons remain legible across dark/light themes and Windows scaling. Source and license: https://github.com/tabler/tabler-icons .
+
+## 2026-10-23 — Isolated Gemini surface-detection experiment
+
+Use `gemini-3.8-flash` only in `tools/vision/`, with structured JSON, medium media resolution and LOW thinking (minimal is unsupported). Reuse existing Electron for original-pixel cropping and a sandboxed offline comparison window; no dependencies or production pipeline changes. Preserve API usage metadata and cache exact inputs plus request configuration locally. Reject invalid boxes and stop on rate limits without automatic retries. The owner must use a non-billed AI Studio project; the tool never changes billing and cannot verify account billing from an API key.
+
+Official model and free-tier documentation checked: https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash and https://ai.google.dev/gemini-api/docs/pricing . Free-tier content may improve provider products. Offline mock tests and comparison rendering passed; no live request or accuracy claim. Run instructions and manual evaluation protocol: `docs/vision-feasibility.md`.
+
+## 2026-10-23 — Owner-authorized automatic crop trial
+
+Following explicit owner authorization, integrate a Gemini adapter into a separate native connection used by browser preview/capture. Keep audio writes independent; network errors, stale responses, quota and request caps fall back to full frames. Use a local DPAPI key, no client secret, no new dependency, no billing mutations. Pin the evaluated model instead of the supplied quickstart's moving alias. Limit automatic requests to one per minute and ten per activation. Manual preview crop closes the detector. See `docs/automatic-crop.md` for constraints, verification and the required real-lesson check. This supersedes the previous standalone-only scope at the owner's request.
