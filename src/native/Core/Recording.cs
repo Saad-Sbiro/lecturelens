@@ -1,7 +1,10 @@
 namespace LectureLens.Core;
 
 public record MediaPacket(int Sequence, double AtMs, byte[] Bytes, string Reason);
-public record SessionInfo(string Id, string CreatedAt, string State, int Chunks, long Bytes, string[] Problems, string? Reason = null);
+public record SessionInfo(string Id, string CreatedAt, string State, int Chunks, long Bytes, string[] Problems, string? Reason = null, string Title = "")
+{
+    public string DisplayDate => DateTimeOffset.TryParse(CreatedAt, out var date) ? date.ToLocalTime().ToString("g") : "";
+}
 public interface IRecordingStorage
 {
     string Create(string mime);

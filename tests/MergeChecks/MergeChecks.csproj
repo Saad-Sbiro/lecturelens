@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><TargetFramework>net10.0-windows</TargetFramework><OutputType>Exe</OutputType><UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors><AssemblyName>LectureLens.MergeChecks</AssemblyName></PropertyGroup>
+ <ItemGroup>
+  <ProjectReference Include="../../src/native/Storage/Storage.csproj"/>
+  <Compile Include="../../src/native/Desktop/Adapters/*.cs" Link="Adapters/%(Filename)%(Extension)"/>
+  <Compile Include="../../src/native/Desktop/MergeWindow.cs" Link="MergeWindow.cs"/>
+  <Resource Include="../../src/assets/logomark.png" Link="assets/logomark.png"/>
+ </ItemGroup>
+</Project>

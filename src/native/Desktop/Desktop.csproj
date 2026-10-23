@@ -9,6 +9,7 @@
     <Resource Include="../../assets/logomark.png" Link="assets/logomark.png" />
     <Content Include="MainWindow.xaml" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../../config/languages.json" Link="languages.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../../config/speech-assets.json" Link="speech-assets.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../../config/native-ui.en.json" Link="ui-strings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

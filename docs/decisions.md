@@ -119,3 +119,19 @@ Chrome setup is one button opening chrome://extensions and copying the unpacked 
 **Font licenses verified from official sources:** IBM Plex Sans Arabic ([IBM OFL](https://github.com/IBM/plex/blob/master/LICENSE.txt)), Noto Naskh Arabic ([Noto OFL](https://github.com/notofonts/arabic/blob/main/OFL.txt)) and Alexandria ([Google Fonts OFL](https://raw.githubusercontent.com/google/fonts/main/ofl/alexandria/OFL.txt)) permit free use and embedding under SIL OFL 1.1. Local license files stay beside the existing unmodified font assets and are included in generated preview CSS comments. The lab uses original CSS geometry and synthetic teaching diagrams, with no stock artwork or sounds. It does not replace the supplied production logo.
 
 **Evidence and limits:** `npm run design:check` checks 132 layout cases, 48 text/surface contrast pairs, keyboard pause/resume with retained focus, named controls and reduced motion, and produces 12 individual screenshots plus 3 comparison boards. Browser renderings at device scales 1.25 and 1.5 are inspection aids, not proof of native Windows DPI behavior. Native capture performance, OS frame behavior and full accessibility remain pending. The detailed run report is `docs/design-lab/verification.json`; user approval is still pending.
+
+## 2026-10-23 — Preserve recording across lesson reloads
+
+The owner prefers preventing split recordings over adding a merge page. Keep the existing offscreen recorder and storage session when the selected tab navigates to its exact original URL. Persist that URL in session storage so worker restarts retain the policy. Different URLs, tab closure/replacement, ended tracks and storage failures retain the stop behavior. No new dependency or capture restart is introduced.
+
+Chrome documents tab capture continuing across navigation: https://developer.chrome.com/docs/extensions/reference/api/tabCapture#method-capture . This fixes our explicit navigation stop; it cannot recover lesson audio that the page does not play during reload, and a changed capture size can still trigger the existing safety stop.
+
+Verification: nine offline extension tests and extension typecheck passed; extension and native host built. The setup script's final registry registration was denied by the environment; existing registration was not changed. Real browser refresh/audio continuity remains for the owner to check using docs/browser-tab-test.md.
+
+## 2026-10-23 — Ordered merge of saved lessons
+
+Plan: add a library merge dialog matching the retained UI; accept two or three stopped inputs; allow explicit ordering; create independent audio/slide output without modifying sources; verify ordering, cancellation, corruption, recovery and native controls with offline fixtures.
+
+Decision: decode each source independently using the existing local audio adapter, stream 16 kHz mono PCM into a valid WAV, and retain durable packets for recovery. No new dependency, provider or account. Binary WebM concatenation was rejected because later containers may not play. Full-motion video is not merged; the result contains audio and slide images. A new transcript/PDF can be generated from the combined lesson.
+
+Source locks protect inputs from concurrent deletion; a private staging directory is published by directory rename only after completion. Original IDs/order/offsets and decision logs are retained. Pause-adjusted slide times are approximate because browser event clocks and decoded sample clocks can differ. Tests cover two/three inputs, reordered PCM and slides, recovery, original preservation, invalid/active/archived/corrupt inputs, cancellation, decoder failure, cleanup and native add/remove/reorder controls. Native speech and notes/PDF regressions and an isolated desktop smoke run passed. No real recording or model/network service was used. See merge-recordings.md for usage and the owner listening check.

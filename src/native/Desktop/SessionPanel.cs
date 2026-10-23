@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO;
+using System.Windows.Data;
+using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using LectureLens.Core;
@@ -13,8 +15,15 @@ internal sealed class SessionPanel(FrameworkElement view)
     private readonly DataGrid sessions = (DataGrid)view.FindName("Sessions");
     private readonly TextBlock message = (TextBlock)view.FindName("SessionMessage");
     private bool busy;
+    private string? selectionId;
     public void Attach()
     {
+        ((Button)view.FindName("MergeRecordings")).Click += async (_, _) => await Run(async () => {
+            if (NotesStudio.IsGenerating) return;
+            var lessons = await Task.Run(store.List);
+            var merged = MergeWindow.Show(view, lessons);
+            if (merged != null) { selectionId = merged; sessions.SelectedItem = null; await Refresh(); message.Text = (string)view.FindResource("mergeDone"); }
+        });
         ((Button)view.FindName("ViewSlides")).Click += async (_, _) => await Run(() =>
         {
             if (sessions.SelectedItem is SessionInfo selected)
@@ -25,7 +34,7 @@ internal sealed class SessionPanel(FrameworkElement view)
             }
             return Task.CompletedTask;
         });
-        ((Button)view.FindName("Refresh")).Click += async (_, _) => await Run(async () => { sessions.ItemsSource = await Task.Run(store.List); });
+        ((Button)view.FindName("Refresh")).Click += async (_, _) => await Run(async () => { await Refresh(); });
         ((Button)view.FindName("Recover")).Click += async (_, _) => await Run(async () =>
         {
             if (sessions.SelectedItem is not SessionInfo selected) return;
@@ -41,7 +50,7 @@ internal sealed class SessionPanel(FrameworkElement view)
         {
             if (sessions.SelectedItem is not SessionInfo selected) return;
             if (MessageBox.Show((string)view.FindResource("deleteConfirm"), "LectureLens", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-            await Task.Run(() => store.Delete(selected.Id)); sessions.ItemsSource = await Task.Run(store.List);
+            await Task.Run(() => store.Delete(selected.Id)); await Refresh();
         });
         ((Button)view.FindName("ExtensionFolder")).Click += (_, _) =>
         {
@@ -63,8 +72,51 @@ internal sealed class SessionPanel(FrameworkElement view)
                 MessageBox.Show(message.Text, "LectureLens");
             } catch (Exception e) { message.Text = e.Message; }
         };
-        // Verify packets on explicit refresh, never repeatedly scan hours of media on a UI timer.
-        _ = Run(async () => { sessions.ItemsSource = await Task.Run(store.List); });
+        Directory.CreateDirectory(store.Root);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+        timer.Tick += async (_, _) => { if (NotesStudio.IsGenerating || busy) return; timer.Stop(); await Run(Refresh); };
+        var watcher = new FileSystemWatcher(store.Root) { IncludeSubdirectories = true, EnableRaisingEvents = true };
+        void Schedule(object? sender, FileSystemEventArgs e) {
+            if (Path.GetFileName(e.FullPath) is "manifest.json" or "finished.json")
+                view.Dispatcher.BeginInvoke(() => { timer.Stop(); timer.Start(); });
+        }
+        watcher.Created += Schedule;
+        watcher.Renamed += (sender, e) => Schedule(sender, e);
+        view.Unloaded += (_, _) => { watcher.Dispose(); timer.Stop(); };
+        // Rescan only when a lesson starts/ends or the user requests refresh.
+        _ = Run(async () => { await Refresh(); });
+    }
+    private async Task Refresh()
+    {
+        selectionId = (sessions.SelectedItem as SessionInfo)?.Id ?? selectionId;
+        var items = await Task.Run(store.List);
+        sessions.ItemsSource = items;
+        Filter();
+        sessions.SelectedItem = items.FirstOrDefault(x => x.Id == selectionId);
+    }
+    private void Filter()
+    {
+        if (sessions.ItemsSource == null) return;
+        var query = ((TextBox)view.FindName("SearchLessons")).Text.Trim();
+        CollectionViewSource.GetDefaultView(sessions.ItemsSource).Filter = item =>
+            item is SessionInfo lesson && (query.Length == 0 || lesson.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase));
+    }
+    private void Rename()
+    {
+        if (NotesStudio.IsGenerating || sessions.SelectedItem is not SessionInfo lesson) return;
+        var dialog = new Window { Owner=Window.GetWindow(view), Title=(string)view.FindResource("renameTitle"), Width=430, Height=215,
+            WindowStartupLocation=WindowStartupLocation.CenterOwner, ResizeMode=ResizeMode.NoResize };
+        var panel = new StackPanel { Margin=new Thickness(22) };
+        panel.Children.Add(new TextBlock { Text=(string)view.FindResource("renameHint"), Margin=new Thickness(0,0,0,10) });
+        var input = new TextBox { Text=lesson.Title, MaxLength=120, Padding=new Thickness(10) }; panel.Children.Add(input);
+        var save = new Button { Content=(string)view.FindResource("save"), Padding=new Thickness(18,8,18,8), Margin=new Thickness(0,15,0,0), IsDefault=true };
+        panel.Children.Add(save); dialog.Content=panel;
+        save.Click += async (_, _) => {
+            try { store.Rename(lesson.Id,input.Text); dialog.Close(); await Run(Refresh); }
+            catch(Exception e) { message.Text=e.Message; }
+        };
+        dialog.Loaded += (_, _) => { input.Focus(); input.SelectAll(); };
+        dialog.ShowDialog();
     }
     private async Task Run(Func<Task> action)
     {
@@ -75,3 +127,4 @@ internal sealed class SessionPanel(FrameworkElement view)
         finally { busy = false; }
     }
 }
+

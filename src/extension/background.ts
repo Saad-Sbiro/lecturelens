@@ -51,7 +51,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         if (message.consent !== true) throw new Error(text.consentRequired);
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab?.id || tab.id !== message.tabId || !tab.url?.startsWith('https://')) throw new Error(text.unavailable);
-        await chrome.storage.session.set({ selectedTab: tab.id });
+        await chrome.storage.session.set({ selectedTab: tab.id, selectedUrl: tab.url });
         // Always pass targetTabId. Tab activation changes never retarget this stream.
         const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
         return await offscreen('preview', { streamId, tabId: tab.id, title: tab.title ?? text.selected });
@@ -68,6 +68,16 @@ async function stopSelected(tabId: number) {
   const { selectedTab } = await chrome.storage.session.get('selectedTab');
   if (selectedTab === tabId) await offscreen('stop', { reason: 'source-navigation-or-close' });
 }
-chrome.webNavigation.onBeforeNavigate.addListener(e => { if (e.frameId === 0) void stopSelected(e.tabId); });
+chrome.webNavigation.onBeforeNavigate.addListener(e => {
+  if (e.frameId !== 0) return;
+  void (async () => {
+    const { selectedTab, selectedUrl } = await chrome.storage.session.get(['selectedTab', 'selectedUrl']);
+    if (selectedTab !== e.tabId) return;
+    // The offscreen stream survives reloads. Keep its recorder and session intact,
+    // but retain the stop boundary for a different page (including redirects).
+    if (typeof selectedUrl === 'string' && e.url === selectedUrl) return;
+    await stopSelected(e.tabId);
+  })();
+});
 chrome.tabs.onRemoved.addListener(id => { void stopSelected(id); });
 chrome.tabs.onReplaced.addListener((_, removed) => { void stopSelected(removed); });

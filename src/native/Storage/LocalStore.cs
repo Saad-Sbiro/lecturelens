@@ -15,7 +15,7 @@ public sealed partial class LocalStore(string root) : IRecordingStorage, IDispos
     private FileStream? sessionLock;
     private int next;
     private double lastMs;
-    public static string DefaultRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LectureLens", "recordings");
+    public static string DefaultRoot => Path.Combine(Environment.GetEnvironmentVariable("LECTURELENS_DATA_ROOT") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LectureLens"), "recordings");
 
     private string Folder(string id)
     {
@@ -32,7 +32,7 @@ public sealed partial class LocalStore(string root) : IRecordingStorage, IDispos
     private static void WriteJson(string file, object value) => Write(file, JsonSerializer.SerializeToUtf8Bytes(value, Json));
     public string Create(string mime)
     {
-        if (mime is not ("audio/webm;codecs=opus" or "video/webm;codecs=vp8,opus" or "video/webm;codecs=vp9,opus" or "video/webm")) throw new InvalidDataException("Unsupported media type");
+        if (mime is not ("audio/wav" or "audio/webm;codecs=opus" or "video/webm;codecs=vp8,opus" or "video/webm;codecs=vp9,opus" or "video/webm")) throw new InvalidDataException("Unsupported media type");
         if (active != null) throw new InvalidOperationException("A session is already active");
         Directory.CreateDirectory(Root);
         rootLock = new FileStream(Path.Combine(Root, "capture.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -95,7 +95,9 @@ public sealed partial class LocalStore(string root) : IRecordingStorage, IDispos
     {
         var folder = Folder(id);
         using var manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(folder, "manifest.json")));
-        var problems = Directory.GetFiles(folder, "*.partial").Select(f => "uncommitted:" + Path.GetFileName(f)).ToList();
+        var problems = Directory.GetFiles(folder, "*.chunk.partial").Select(f => "uncommitted:" + Path.GetFileName(f)).ToList();
+        if (File.Exists(Path.Combine(folder, "raw-removed.json")))
+            return new SessionInfo(id, manifest.RootElement.GetProperty("createdAt").GetString()!, "archived", 0, 0, [], Title: ReadTitle(id));
         int count = 0; long bytes = 0; double time = 0;
         foreach (var file in Directory.GetFiles(folder, "*.chunk").Order(StringComparer.Ordinal))
         {
@@ -112,7 +114,7 @@ public sealed partial class LocalStore(string root) : IRecordingStorage, IDispos
         using var finished = File.Exists(Path.Combine(folder, "finished.json")) ? JsonDocument.Parse(File.ReadAllBytes(Path.Combine(folder, "finished.json"))) : null;
         var reason = finished?.RootElement.GetProperty("reason").GetString();
         var state = IsActive(id) ? "recording" : problems.Count > 0 || reason == "capture-error" ? "needs-review" : reason != null ? "finished" : "interrupted";
-        return new SessionInfo(id, manifest.RootElement.GetProperty("createdAt").GetString()!, state, count, bytes, problems.ToArray(), reason);
+        return new SessionInfo(id, manifest.RootElement.GetProperty("createdAt").GetString()!, state, count, bytes, problems.ToArray(), reason, ReadTitle(id));
     }
     public IReadOnlyList<SessionInfo> List()
     {
@@ -132,7 +134,7 @@ public sealed partial class LocalStore(string root) : IRecordingStorage, IDispos
         ExportSlides(id);
         using var manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Folder(id), "manifest.json")));
         var audioOnly = manifest.RootElement.GetProperty("mimeType").GetString()!.StartsWith("audio/");
-        var target = Path.Combine(Folder(id), audioOnly ? "audio.webm" : "recording.webm"); SessionInfo info;
+        var target = Path.Combine(Folder(id), manifest.RootElement.GetProperty("mimeType").GetString() == "audio/wav" ? "audio.wav" : audioOnly ? "audio.webm" : "recording.webm"); SessionInfo info;
         using (var stream = new FileStream(target + ".partial", FileMode.Create, FileAccess.Write, FileShare.None))
         { info = Scan(id, p => stream.Write(p.Bytes)); stream.Flush(true); }
         if (info.Chunks == 0 || info.Problems.Any(p => p.StartsWith("corrupt-or-gap:"))) throw new InvalidDataException("Recovery incomplete: originals preserved for review");
@@ -150,3 +152,4 @@ public sealed partial class LocalStore(string root) : IRecordingStorage, IDispos
     public long FreeBytes() { Directory.CreateDirectory(Root); return new DriveInfo(Path.GetPathRoot(Root)!).AvailableFreeSpace; }
     public void Dispose() { active = null; sessionLock?.Dispose(); sessionLock = null; rootLock?.Dispose(); rootLock = null; }
 }
+

@@ -7,7 +7,7 @@ const bundle = await build({ configFile: false, logLevel: 'silent', build: { wri
 const code = (Array.isArray(bundle) ? bundle[0] : bundle).output.find(item => item.type === 'chunk').code;
 function harness() {
   const listeners = {}, captures = [], messages = [], layoutTargets = [];
-  let tab = { id: 7, url: 'https://class.example.test', title: 'Synthetic lesson' }, state = 'idle', selectedTab, hasDocument = false;
+  let tab = { id: 7, url: 'https://class.example.test', title: 'Synthetic lesson' }, state = 'idle', selectedTab, selectedUrl, hasDocument = false;
   const event = name => ({ addListener(fn) { listeners[name] = fn; } });
   const chrome = {
     runtime: { id: 'test', getURL: file => `chrome-extension://test/${file}`, onConnect: event('connect'), onMessage: event('message'), async sendMessage(message) {
@@ -17,7 +17,7 @@ function harness() {
     offscreen: { hasDocument: async () => hasDocument, createDocument: async () => { hasDocument = true; }, Reason: { USER_MEDIA: 'USER_MEDIA' } },
     tabs: { query: async () => [tab], onRemoved: event('removed'), onReplaced: event('replaced') },
     tabCapture: { getMediaStreamId: async value => { captures.push(value); return 'fixed-stream'; } },
-    storage: { session: { set: async value => { selectedTab = value.selectedTab; }, get: async () => ({ selectedTab }) } },
+    storage: { session: { set: async value => { selectedTab = value.selectedTab; selectedUrl = value.selectedUrl; }, get: async () => ({ selectedTab, selectedUrl }) } },
     webNavigation: { onBeforeNavigate: event('navigation') },
     scripting: { executeScript: async request => { layoutTargets.push(request.target.tabId); return [{ result: [{ x: 0.2, y: 0.2, width: 0.5, height: 0.5 }] }]; } },
     action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
@@ -27,7 +27,7 @@ function harness() {
     return new Promise(resolve => listeners.message({ target: 'background', op, ...extra }, { id: 'test', url: chrome.runtime.getURL('popup.html') }, resolve));
   } };
 }
-test('tab selection stays fixed when another tab becomes active; only selected main-frame navigation stops', async () => {
+test('selected tab reload keeps the existing stream; a different page still stops', async () => {
   const h = harness();
   assert.equal((await h.send('preview', { consent: true, tabId: 7 })).ok, true);
   assert.equal(h.captures.length, 1); assert.equal(h.captures[0].targetTabId, 7);
@@ -36,8 +36,23 @@ test('tab selection stays fixed when another tab becomes active; only selected m
   h.listeners.navigation({ frameId: 0, tabId: 9 }); h.listeners.navigation({ frameId: 1, tabId: 7 });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(h.messages.some(m => m.op === 'stop'), false);
-  h.listeners.navigation({ frameId: 0, tabId: 7 }); await new Promise(resolve => setImmediate(resolve));
+  for (let i = 0; i < 3; i++) h.listeners.navigation({ frameId: 0, tabId: 7, url: 'https://class.example.test' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.messages.some(m => m.op === 'stop'), false);
+  assert.equal(h.captures.length, 1);
+  assert.equal(h.messages.filter(m => m.op === 'preview').length, 1);
+  h.listeners.navigation({ frameId: 0, tabId: 7, url: 'https://class.example.test/other' }); await new Promise(resolve => setImmediate(resolve));
   assert.equal(h.messages.at(-1).op, 'stop');
+});
+test('selected tab close or replacement stops; unrelated tabs do not', async () => {
+  for (const event of ['removed', 'replaced']) {
+    const h = harness(); await h.send('preview', { consent: true, tabId: 7 });
+    const fire = id => event === 'removed' ? h.listeners.removed(id) : h.listeners.replaced(99, id);
+    fire(8); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.messages.some(m => m.op === 'stop'), false);
+    fire(7); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.messages.at(-1).op, 'stop');
+  }
 });
 test('layout lookup is scoped to the selected tab and accepted only from offscreen', async () => {
   const h = harness(); await h.send('preview', { consent: true, tabId: 7 });
