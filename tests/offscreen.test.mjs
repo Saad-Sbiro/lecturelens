@@ -8,7 +8,7 @@ const built = await build({ configFile: false, logLevel: 'silent', build: { writ
 const code = (Array.isArray(built) ? built[0] : built).output.find(item => item.type === 'chunk').code;
 
 test('offscreen orchestration: preview does not persist; recording drains packets before finish and releases tracks', { timeout: 10000 }, async () => {
-  const calls = [], constraints = [], draws = []; let receiver, connectionCount = 0;
+  const calls = [], constraints = [], draws = []; let receiver, connectionCount = 0, visionResponse;
   const tracks = ['video', 'audio'].map(kind => ({ kind, readyState: 'live', addEventListener() {}, removeEventListener() {}, stop() { this.readyState = 'ended'; } }));
   const stream = { getTracks: () => tracks, getVideoTracks: () => [tracks[0]], getAudioTracks: () => [tracks[1]] };
   const video = { readyState: 2, videoWidth: 320, videoHeight: 180, srcObject: null, play: async () => {} };
@@ -37,7 +37,7 @@ test('offscreen orchestration: preview does not persist; recording drains packet
       onMessage: { addListener(fn) { nativeReply = fn; } }, onDisconnect: { addListener() {} }, disconnect() {},
       postMessage(request) {
         calls.push({ ...request, connection });
-        if (request.op === 'detectRegion') return; // Cloud can hang without blocking storage.
+        if (request.op === 'detectRegion') { visionResponse = value => nativeReply({ requestId: request.requestId, ok: true, value }); return; }
         const value = request.op === 'create' ? { id: 'synthetic' } : request.op === 'heartbeat' ? { stopRequested: false } : true;
         // A delayed ACK makes finish ordering observable.
         setTimeout(() => nativeReply({ requestId: request.requestId, ok: true, value }), 5);
@@ -70,7 +70,7 @@ test('offscreen orchestration: preview does not persist; recording drains packet
     assert.equal(constraints[0].video.mandatory.maxFrameRate, 1);
     const preview = (await send('status')).value;
     assert.equal(preview.cropMode, 'manual');
-    assert.equal(preview.cropConfirmed, true, 'full-frame safety fallback permits recording while vision is pending');
+    assert.equal(preview.cropConfirmed, false, 'pending vision must not masquerade as a confirmed crop');
     video.videoWidth = 1600; video.videoHeight = 1200;
     await send('status', { largePreview: true });
     assert.deepEqual(draws.at(-1).slice(1), [0, 0, 1600, 1200], 'editor preserves source aspect and resolution');
@@ -78,6 +78,12 @@ test('offscreen orchestration: preview does not persist; recording drains packet
     assert.deepEqual(draws.at(-1).slice(1), [0, 0, 480, 360], 'compact preview also preserves aspect');
     video.videoWidth = 320; video.videoHeight = 180;
     await new Promise(resolve => setTimeout(resolve, 3200));
+    assert.equal((await send('start')).ok, false, 'pending detection requires a real crop or explicit manual choice');
+    visionResponse({ detection: { crop: { x: .3, y: .3, width: .4, height: .4 }, reason: 'gemini-slide' }, cacheHit: false });
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    const detected = (await send('status')).value;
+    assert.equal(detected.cropConfirmed, true, 'successful native detection enables recording');
+    assert.equal(detected.crop.x, .3, 'the detected box reaches the extension preview');
     assert.equal((await send('crop', { crop: { x: 0.2, y: 0.2, width: 0.5, height: 0.5 } })).ok, true);
     await new Promise(resolve => setTimeout(resolve, 150));
     assert.equal((await send('start')).ok, true);

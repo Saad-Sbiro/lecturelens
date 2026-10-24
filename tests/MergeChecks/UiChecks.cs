@@ -101,7 +101,56 @@ internal static class UiChecks
         reviewTimer.Start();
         SlideReviewWindow.ShowFor(view, folder);
         Dispatcher.PushFrame(frame);
+        var previousRoot = Environment.GetEnvironmentVariable("LECTURELENS_DATA_ROOT");
+        Environment.SetEnvironmentVariable("LECTURELENS_DATA_ROOT", Path.GetFullPath(Path.Combine("artifacts", "startup-check", Guid.NewGuid().ToString())));
+        using (var store = new LectureLens.Storage.LocalStore(LectureLens.Storage.LocalStore.DefaultRoot)) {
+            var id = store.Create("audio/wav");
+            store.Finish(id, "fixture");
+            if (!view.IsLoaded) throw new Exception("Startup regression requires an already loaded view");
+            new SessionPanel(view).Attach();
+            var startupFrame = new DispatcherFrame();
+            var startupTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+            int startupTicks = 0;
+            startupTimer.Tick += (_, _) => {
+                var grid = (DataGrid)view.FindName("Sessions");
+                if (grid.Items.OfType<SessionInfo>().Any(s => s.Id == id)) {
+                    Console.WriteLine("PASS lessons load automatically when attached after Loaded without Refresh");
+                    startupTimer.Stop(); startupFrame.Continue = false;
+                } else if (++startupTicks >= 100) {
+                    failure = new Exception("Lessons missing on startup");
+                    startupTimer.Stop(); startupFrame.Continue = false;
+                }
+            };
+            startupTimer.Start(); Dispatcher.PushFrame(startupFrame);
+        }
+        var scroll = new ScrollViewer {
+            Width = 360, Height = 240, HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center, VerticalScrollBarVisibility = ScrollBarVisibility.Visible,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Visible,
+            Content = new Border { Width = 900, Height = 900, Background = (Brush)app.Resources["PanelBackground"],
+                Child = new TextBlock { Text = "Scroll preview", Margin = new Thickness(20) } }
+        };
+        Grid.SetColumnSpan(scroll, 4); Grid.SetRowSpan(scroll, 3); ((Grid)view).Children.Add(scroll);
+        foreach (var theme in new[] { "dark", "light" }) {
+            AppearanceSettings.Apply(app, new AppearanceSettings.Choice(theme, AppearanceSettings.DefaultFont));
+            owner.UpdateLayout(); scroll.ScrollToVerticalOffset(100); scroll.ScrollToHorizontalOffset(100); owner.UpdateLayout();
+            foreach (var name in new[] { "PART_VerticalScrollBar", "PART_HorizontalScrollBar" }) {
+                var bar = (System.Windows.Controls.Primitives.ScrollBar)scroll.Template.FindName(name, scroll);
+                if (bar.Template.FindName("Grip", bar) == null) throw new Exception("Custom scrollbar template missing: " + name);
+            }
+            if (scroll.VerticalOffset != 100 || scroll.HorizontalOffset != 100) throw new Exception("Scrollbar offsets failed");
+            var visual = new DrawingVisual();
+            using (var drawing = visual.RenderOpen()) {
+                drawing.DrawRectangle((Brush)app.Resources["AppBackground"], null, new Rect(0, 0, 360, 240));
+                drawing.DrawRectangle(new VisualBrush(scroll), null, new Rect(0, 0, 360, 240));
+            }
+            var shot = new RenderTargetBitmap(360, 240, 96, 96, PixelFormats.Pbgra32); shot.Render(visual);
+            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(shot));
+            using var output = File.Create("artifacts/scrollbars-" + theme + ".png"); encoder.Save(output);
+        }
+        Console.WriteLine("PASS themed horizontal and vertical scrollbars render and scroll");
         owner.Close(); app.Shutdown();
+        Environment.SetEnvironmentVariable("LECTURELENS_DATA_ROOT", previousRoot);
         if (failure != null) throw failure;
     }
 }

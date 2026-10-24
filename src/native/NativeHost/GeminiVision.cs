@@ -25,19 +25,28 @@ internal sealed class GeminiVision
     }
     internal static async Task<object> Detect(string data, HttpClient? injected = null, string? cacheRoot = null)
     {
+        var stage = "input";
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var root = cacheRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LectureLens", "vision-cache");
+        void Diagnostic(string outcome, string? category = null, int? status = null) {
+            try { Directory.CreateDirectory(root); File.WriteAllText(Path.Combine(root, "last-diagnostic.json"), JsonSerializer.Serialize(new { model = Model, stage, outcome, category, status, elapsedMs = watch.ElapsedMilliseconds, at = DateTimeOffset.UtcNow })); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        }
         try {
             var bytes = Convert.FromBase64String(data);
             if (bytes.Length is < 4 or > 650000 || bytes[0] != 255 || bytes[1] != 216) throw new InvalidDataException("Invalid screenshot");
-            var root = cacheRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LectureLens", "vision-cache");
             Directory.CreateDirectory(root);
+            stage = "cache";
             var hash = Convert.ToHexStringLower(SHA256.HashData(bytes.Concat(Encoding.UTF8.GetBytes(Model + Prompt + "medium/low/v1")).ToArray()));
             var file = Path.Combine(root, hash + ".json");
             if (File.Exists(file)) {
                 using var saved = JsonDocument.Parse(await File.ReadAllTextAsync(file));
-                return new { detection = Validate(saved.RootElement.GetProperty("result")), cacheHit = true };
+                var cached = Validate(saved.RootElement.GetProperty("result")); Diagnostic("cache-hit");
+                return new { detection = cached, cacheHit = true };
             }
+            stage = "local-key";
             var key = injected is null ? ReadKey() : "mock-key";
-            using var owned = injected is null ? new HttpClient { Timeout = TimeSpan.FromSeconds(45) } : null;
+            using var owned = injected is null ? new HttpClient { Timeout = TimeSpan.FromSeconds(90) } : null;
             var http = injected ?? owned!;
             using var request = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/{Model}:generateContent");
             request.Headers.Add("x-goog-api-key", key);
@@ -48,19 +57,42 @@ internal sealed class GeminiVision
                         box = new { anyOf = new object[] { new { type = "array", items = new { type = "number" }, minItems = 4, maxItems = 4 }, new { type = "null" } } },
                         type = new { type = "string", @enum = new[] { "slide", "document", "code", "whiteboard", "none" } }, isEducational = new { type = "boolean" } } } }
             }), Encoding.UTF8, "application/json");
+            stage = "request"; Diagnostic("started");
             using var response = await http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return new { error = $"Gemini HTTP {(int)response.StatusCode}; using full frame. Check Free-tier access/quota.", disabled = response.StatusCode is System.Net.HttpStatusCode.TooManyRequests or System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden };
+            if (!response.IsSuccessStatusCode) {
+                Diagnostic("http-error", status: (int)response.StatusCode);
+                var status = (int)response.StatusCode;
+                var retryable = status is 408 or 500 or 502 or 503 or 504;
+                var message = retryable
+                    ? $"Gemini is temporarily unavailable (HTTP {status}). Try again shortly or choose a manual crop."
+                    : status == 429 ? "Gemini request quota reached (HTTP 429). Wait for quota reset or choose a manual crop."
+                    : $"Gemini HTTP {status}. Check model access or the saved key; choose a manual crop to continue.";
+                return new { error = message, disabled = !retryable, retryable };
+            }
+            stage = "response-json";
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             var usage = json.RootElement.TryGetProperty("usageMetadata", out var u) ? u.Clone() : (JsonElement?)null;
             await File.WriteAllTextAsync(Path.Combine(root, hash + ".usage.json"), JsonSerializer.Serialize(new { model = Model, usage, at = DateTimeOffset.UtcNow }));
+            stage = "detection";
             var candidate = json.RootElement.GetProperty("candidates")[0];
             if (candidate.GetProperty("finishReason").GetString() != "STOP") throw new InvalidDataException("Incomplete vision response");
             var text = string.Concat(candidate.GetProperty("content").GetProperty("parts").EnumerateArray().Where(p => !p.TryGetProperty("thought", out var t) || !t.GetBoolean()).Select(p => p.TryGetProperty("text", out var s) ? s.GetString() : ""));
             using var parsed = JsonDocument.Parse(text); var result = Validate(parsed.RootElement);
+            stage = "save-cache";
             await File.WriteAllTextAsync(file + ".partial", JsonSerializer.Serialize(new { result = parsed.RootElement, usage }));
             File.Move(file + ".partial", file, true);
-            return new { detection = result, cacheHit = false };
-        } catch (Exception e) when (e is not OutOfMemoryException) { return new { error = "Auto crop unavailable. Use manual crop or keep full frame.", disabled = true }; }
+            Diagnostic("success"); return new { detection = result, cacheHit = false };
+        } catch (Exception e) when (e is not OutOfMemoryException) {
+            Diagnostic("failed", e.GetType().Name);
+            var message = stage == "local-key" ? "Cannot read the saved Gemini key. Reconfigure the local key." : e switch {
+                OperationCanceledException => "Gemini image analysis timed out after 90 seconds. Retry with a stable slide or choose a manual crop.",
+                HttpRequestException => "Cannot reach Gemini image analysis. Check the connection, then retry or choose a manual crop.",
+                _ when stage is "response-json" or "detection" => "Gemini returned no valid slide coordinates. Retry with a clear, stable slide or choose a manual crop.",
+                _ => "Local vision processing failed (" + stage + "). Choose a manual crop; diagnostic saved locally."
+            };
+            var retryable = stage == "request" && e is OperationCanceledException or HttpRequestException;
+            return new { error = message, disabled = !retryable, retryable };
+        }
     }
     [StructLayout(LayoutKind.Sequential)] struct Blob { public int Length; public IntPtr Data; }
     [DllImport("crypt32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)]

@@ -27,7 +27,7 @@ export class NativeClient {
     if (!this.connected) return Promise.reject(new Error('Native connection closed'));
     return new Promise((resolve, reject) => {
       const requestId = crypto.randomUUID();
-      const timer = setTimeout(() => { this.pending.delete(requestId); reject(new Error('Local request timed out')); }, op === 'finish' ? 120000 : op === 'detectRegion' ? 55000 : 15000);
+      const timer = setTimeout(() => { this.pending.delete(requestId); reject(new Error('Local request timed out')); }, op === 'finish' ? 120000 : op === 'detectRegion' ? 100000 : 15000);
       this.pending.set(requestId, { resolve, reject, timer });
       this.port.postMessage({ requestId, op, ...data });
     });

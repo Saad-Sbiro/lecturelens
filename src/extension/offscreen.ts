@@ -26,7 +26,7 @@ function enableAuto() {
   vision = new NativeClient();
   const connection = vision;
   autoRegion = new AutoRegion(data => connection.call('detectRegion', { data, consent: true }));
-  crop = fullCrop; cropConfirmed = true;
+  crop = fullCrop; cropConfirmed = false;
 }
 function updateAuto() {
   if (!autoRegion || video.readyState < 2) return;
@@ -40,8 +40,8 @@ function updateAuto() {
       if (data.length > 850000) throw new Error('Vision frame too large');
       return data;
     }, performance.now());
-    if (state === 'previewing') crop = autoRegion.region.crop;
-  } catch { disableAuto(); crop = fullCrop; }
+    if (state === 'previewing') { crop = autoRegion.region.crop; cropConfirmed = !autoRegion.region.review; }
+  } catch { crop = autoRegion?.region.crop ?? crop; disableAuto(); cropConfirmed = false; }
 }
 const badge = (value: string) => { void chrome.runtime.sendMessage({ target: 'background', op: 'badge', text: value }).catch(() => {}); };
 async function release() {
@@ -157,7 +157,7 @@ async function command(message: { op: string; streamId?: string; reason?: string
     try {
       const clock = () => performance.now() - started;
       sampler = new SlideSampler(video, crop, native!, id, clock, e => { error = String(e); void stop('visual-error'); }, cropMode,
-        autoRegion ? () => autoRegion?.region ?? { crop: fullCrop, reason: 'auto-unavailable', review: true } : undefined);
+        autoRegion ? () => autoRegion?.region ?? { crop, reason: 'auto-unavailable', review: true } : undefined);
       const audioStream = new MediaStream(stream!.getAudioTracks());
       session = await new BrowserMediaSource(audioStream, mime, { now: clock }).start({ signal: new AbortController().signal, timeoutMs: 15000 });
       state = 'recording'; badge('REC'); pump = save();

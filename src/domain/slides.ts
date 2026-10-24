@@ -4,16 +4,21 @@ export const fullCrop: Crop = { x: 0, y: 0, width: 1, height: 1 };
 export function validCrop(c: Crop): boolean {
   return [c.x, c.y, c.width, c.height].every(Number.isFinite) && c.x >= 0 && c.y >= 0 && c.width >= 0.05 && c.height >= 0.05 && c.x + c.width <= 1.001 && c.y + c.height <= 1.001;
 }
-export function difference(a: Uint8Array, b: Uint8Array): number {
+export function difference(a: Uint8Array, b: Uint8Array, crop: Crop = fullCrop): number {
   if (a.length !== config.compareWidth * config.compareHeight || a.length !== b.length) throw new Error('Invalid comparison frame');
   let changed = 0, blocks = 0;
   for (let y = 0; y < config.compareHeight; y += config.block) for (let x = 0; x < config.compareWidth; x += config.block) {
+    // Ignore surrounding chat/webcam content once the educational area is known.
+    const left = Math.max(x, Math.ceil(crop.x * config.compareWidth)), top = Math.max(y, Math.ceil(crop.y * config.compareHeight));
+    const right = Math.min(x + config.block, Math.floor((crop.x + crop.width) * config.compareWidth));
+    const bottom = Math.min(y + config.block, Math.floor((crop.y + crop.height) * config.compareHeight));
+    if (left >= right || top >= bottom) continue;
     let delta = 0;
-    for (let yy = y; yy < y + config.block; yy++) for (let xx = x; xx < x + config.block; xx++) delta += Math.abs(a[yy * config.compareWidth + xx] - b[yy * config.compareWidth + xx]);
-    if (delta / (config.block * config.block) > config.pixelDelta) changed++;
+    for (let yy = top; yy < bottom; yy++) for (let xx = left; xx < right; xx++) delta += Math.abs(a[yy * config.compareWidth + xx] - b[yy * config.compareWidth + xx]);
+    if (delta / ((right - left) * (bottom - top)) > config.pixelDelta) changed++;
     blocks++;
   }
-  return changed / blocks;
+  return blocks ? changed / blocks : 0;
 }
 export class SlideIndex {
   private kept: Uint8Array[] = [];

@@ -15,6 +15,7 @@ internal sealed class SessionPanel(FrameworkElement view)
     private readonly DataGrid sessions = (DataGrid)view.FindName("Sessions");
     private readonly TextBlock message = (TextBlock)view.FindName("SessionMessage");
     private bool busy;
+    private bool detached;
     private string? selectionId;
     public void Attach()
     {
@@ -83,19 +84,22 @@ internal sealed class SessionPanel(FrameworkElement view)
         }
         watcher.Created += Schedule;
         watcher.Renamed += (sender, e) => Schedule(sender, e);
-        view.Unloaded += (_, _) => { watcher.Dispose(); timer.Stop(); };
-        // Rescan only when a lesson starts/ends or the user requests refresh.
-        // Start after WPF installs its dispatcher synchronization context.
-        view.Loaded += async (_, _) => await Run(Refresh);
+        view.Unloaded += (_, _) => { detached = true; watcher.Dispose(); timer.Stop(); };
+        // Attach can run after Loaded (including replacing content in a visible
+        // window). Queue the initial scan explicitly instead of missing that event.
+        view.Dispatcher.InvokeAsync(async () => { if (!detached) await Run(Refresh); }, DispatcherPriority.Loaded);
         ((TextBox)view.FindName("SearchLessons")).TextChanged += (_, _) => Filter();
     }
     private async Task Refresh()
     {
         selectionId = (sessions.SelectedItem as SessionInfo)?.Id ?? selectionId;
-        var items = await Task.Run(store.List);
-        sessions.ItemsSource = items;
-        Filter();
-        sessions.SelectedItem = items.FirstOrDefault(x => x.Id == selectionId);
+        var items = await Task.Run(store.List).ConfigureAwait(false);
+        await view.Dispatcher.InvokeAsync(() => {
+            if (detached) return;
+            sessions.ItemsSource = items;
+            Filter();
+            sessions.SelectedItem = items.FirstOrDefault(x => x.Id == selectionId);
+        });
     }
     private void Filter()
     {

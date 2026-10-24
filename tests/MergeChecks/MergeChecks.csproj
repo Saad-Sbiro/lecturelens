@@ -4,6 +4,9 @@
   <ProjectReference Include="../../src/native/Storage/Storage.csproj"/>
   <Compile Include="../../src/native/Desktop/Adapters/*.cs" Link="Adapters/%(Filename)%(Extension)"/>
   <Compile Include="../../src/native/Desktop/InAppDialog.cs" Link="InAppDialog.cs"/>
+  <Compile Include="../../src/native/Desktop/SessionPanel.cs" Link="SessionPanel.cs"/>
+  <Compile Include="../../src/native/Desktop/NotesStudio.cs" Link="NotesStudio.cs"/>
+  <Compile Include="../../src/native/Desktop/LessonTranscript.cs" Link="LessonTranscript.cs"/>
   <Compile Include="../../src/native/Desktop/Notifications.cs" Link="Notifications.cs"/>
   <Compile Include="../../src/native/Desktop/AppearanceSettings.cs" Link="AppearanceSettings.cs"/>
   <Compile Include="../../src/native/Desktop/MergeWindow.cs" Link="MergeWindow.cs"/>
