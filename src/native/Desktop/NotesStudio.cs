@@ -181,7 +181,9 @@ internal sealed class NotesStudio(FrameworkElement view)
   var actions=new WrapPanel{Margin=new Thickness(0,20,0,0)};stack.Children.Add(actions);
   var save=new Button{Content=S("save"),Style=(Style)view.FindResource("Primary")};actions.Children.Add(save);
   var cancel=new Button{Content=S("cancelGeneration")};actions.Children.Add(cancel);
+  var terms=new Button{Content=LectureLens.Storage.TermsAgreement.Document.Title};actions.Children.Add(terms);
   var dialog=new InAppDialog(view,stack,520);dialog.Dismiss=dialog.Close;
+  terms.Click+=(_,_)=>{dialog.Close();TermsNotice.Show(view,false);};
   cancel.Click+=(_,_)=>dialog.Close();
   save.Click+=(_,_)=>{
    try {

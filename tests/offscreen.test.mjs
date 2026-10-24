@@ -7,10 +7,10 @@ import { build } from 'vite';
 const built = await build({ configFile: false, logLevel: 'silent', build: { write: false, minify: false, lib: { entry: 'src/extension/offscreen.ts', name: 'RecordingProbe', formats: ['iife'] } } });
 const code = (Array.isArray(built) ? built[0] : built).output.find(item => item.type === 'chunk').code;
 
-test('offscreen orchestration: preview does not persist; recording drains packets before finish and releases tracks', { timeout: 10000 }, async () => {
+for (const [voiceOnly, allowCloud] of [[false, true], [true, true], [false, false]]) test(`${voiceOnly ? 'voice' : allowCloud ? 'slides-cloud' : 'slides-local'}: offscreen orchestration: preview does not persist; recording drains packets before finish and releases tracks`, { timeout: 10000 }, async () => {
   const calls = [], constraints = [], draws = []; let receiver, connectionCount = 0, visionResponse;
   const tracks = ['video', 'audio'].map(kind => ({ kind, readyState: 'live', addEventListener() {}, removeEventListener() {}, stop() { this.readyState = 'ended'; } }));
-  const stream = { getTracks: () => tracks, getVideoTracks: () => [tracks[0]], getAudioTracks: () => [tracks[1]] };
+  const stream = { getTracks: () => voiceOnly ? [tracks[1]] : tracks, getVideoTracks: () => voiceOnly ? [] : [tracks[0]], getAudioTracks: () => [tracks[1]] };
   const video = { readyState: 2, videoWidth: 320, videoHeight: 180, srcObject: null, play: async () => {} };
   function makeCanvas() {
     const canvas = { width: 320, height: 180, toDataURL: () => 'data:image/jpeg;base64,/9j/2Q==', getContext: () => ({ drawImage(...args) { draws.push(args); }, getImageData: () => ({ data: Uint8ClampedArray.from({ length: canvas.width * canvas.height * 4 }, (_, i) => Math.floor(i / 4) % 20 < 10 ? 200 : 40) }) }) };
@@ -48,7 +48,7 @@ test('offscreen orchestration: preview does not persist; recording drains packet
     chrome, document: { querySelector: () => video, createElement: makeCanvas },
     navigator: { mediaDevices: { getUserMedia: async value => {
       for (const track of [value.audio, value.video]) {
-        if ('mandatory' in track || 'optional' in track) {
+        if (track && ('mandatory' in track || 'optional' in track)) {
           assert.ok(Object.keys(track).every(key => key === 'mandatory' || key === 'optional'),
             'Chrome rejects mixing legacy mandatory/optional with standard constraints');
         }
@@ -62,32 +62,46 @@ test('offscreen orchestration: preview does not persist; recording drains packet
   });
   const send = (op, extra = {}) => new Promise(resolve => receiver({ target: 'offscreen', op, ...extra }, { id: 'test' }, resolve));
   try {
-    assert.equal((await send('preview', { streamId: 'one-tab-only' })).ok, true);
+    assert.equal((await send('preview', { streamId: 'one-tab-only', lessonMode: voiceOnly ? 'voice' : 'slides', cloudConsent: allowCloud })).ok, true);
     assert.equal(calls.some(call => call.op === 'create'), false);
     assert.equal(constraints.length, 1);
     assert.equal(constraints[0].audio.mandatory.chromeMediaSourceId, 'one-tab-only');
-    assert.equal(constraints[0].video.mandatory.chromeMediaSourceId, 'one-tab-only');
-    assert.equal(constraints[0].video.mandatory.maxFrameRate, 1);
-    const preview = (await send('status')).value;
-    assert.equal(preview.cropMode, 'manual');
-    assert.equal(preview.cropConfirmed, false, 'pending vision must not masquerade as a confirmed crop');
-    video.videoWidth = 1600; video.videoHeight = 1200;
-    await send('status', { largePreview: true });
-    assert.deepEqual(draws.at(-1).slice(1), [0, 0, 1600, 1200], 'editor preserves source aspect and resolution');
-    await send('status');
-    assert.deepEqual(draws.at(-1).slice(1), [0, 0, 480, 360], 'compact preview also preserves aspect');
-    video.videoWidth = 320; video.videoHeight = 180;
-    await new Promise(resolve => setTimeout(resolve, 3200));
-    assert.equal((await send('start')).ok, false, 'pending detection requires a real crop or explicit manual choice');
-    visionResponse({ detection: { crop: { x: .3, y: .3, width: .4, height: .4 }, reason: 'gemini-slide' }, cacheHit: false });
-    await new Promise(resolve => setTimeout(resolve, 1100));
-    const detected = (await send('status')).value;
-    assert.equal(detected.cropConfirmed, true, 'successful native detection enables recording');
-    assert.equal(detected.crop.x, .3, 'the detected box reaches the extension preview');
-    assert.equal((await send('crop', { crop: { x: 0.2, y: 0.2, width: 0.5, height: 0.5 } })).ok, true);
+    if (!voiceOnly) {
+      assert.equal(constraints[0].video.mandatory.chromeMediaSourceId, 'one-tab-only');
+      assert.equal(constraints[0].video.mandatory.maxFrameRate, 1);
+      const preview = (await send('status')).value;
+      assert.equal(preview.cropMode, 'manual');
+      assert.equal(preview.cropConfirmed, false, 'pending vision must not masquerade as a confirmed crop');
+      video.videoWidth = 1600; video.videoHeight = 1200;
+      await send('status', { largePreview: true });
+      assert.deepEqual(draws.at(-1).slice(1), [0, 0, 1600, 1200], 'editor preserves source aspect and resolution');
+      await send('status');
+      assert.deepEqual(draws.at(-1).slice(1), [0, 0, 480, 360], 'compact preview also preserves aspect');
+      video.videoWidth = 320; video.videoHeight = 180;
+      if (allowCloud) {
+        await new Promise(resolve => setTimeout(resolve, 3200));
+        assert.equal((await send('start')).ok, false, 'pending detection requires a real crop or explicit manual choice');
+        visionResponse({ detection: { crop: { x: .3, y: .3, width: .4, height: .4 }, reason: 'gemini-slide' }, cacheHit: false });
+        await new Promise(resolve => setTimeout(resolve, 1100));
+        const detected = (await send('status')).value;
+        assert.equal(detected.cropConfirmed, true, 'successful native detection enables recording');
+        assert.equal(detected.crop.x, .3, 'the detected box reaches the extension preview');
+      } else {
+        assert.equal((await send('autoCrop')).ok, false, 'general terms never authorize cloud images');
+        assert.equal(calls.some(call => call.op === 'detectRegion'), false);
+      }
+      assert.equal((await send('crop', { crop: { x: 0.2, y: 0.2, width: 0.5, height: 0.5 } })).ok, true);
+    } else {
+      assert.equal(constraints[0].video, false);
+      video.readyState = 0;
+      assert.equal((await send('status')).value.image, undefined);
+      assert.equal((await send('status')).value.lessonMode, 'voice');
+      for (const op of ['autoCrop', 'cropMode', 'crop']) assert.equal((await send(op)).ok, false);
+      assert.equal((await send('start')).ok, false, 'voice mode still requires recent sound');
+    }
     await new Promise(resolve => setTimeout(resolve, 150));
     assert.equal((await send('start')).ok, true);
-    assert.notEqual(calls.find(call => call.op === 'detectRegion').connection, calls.find(call => call.op === 'create').connection, 'cloud requests cannot block the storage native host');
+    if (!voiceOnly && allowCloud) assert.notEqual(calls.find(call => call.op === 'detectRegion').connection, calls.find(call => call.op === 'create').connection, 'cloud requests cannot block the storage native host');
     await send('pause'); await send('pause'); await send('stop');
     assert.equal((await send('status')).value.state, 'finished');
     const packets = calls.filter(call => call.op === 'append');
@@ -95,9 +109,14 @@ test('offscreen orchestration: preview does not persist; recording drains packet
     packets.forEach((packet, index) => { assert.equal(packet.sequence, index); assert.ok(Buffer.from(packet.data, 'base64').length <= 262144); });
     assert.equal(calls.at(-1).op, 'finish');
     assert.equal(calls.find(call => call.op === 'create').mime, 'audio/webm;codecs=opus');
-    assert.ok(calls.some(call => call.op === 'slide'));
-    assert.ok(draws.some(args => args.length === 9 && args[1] === 64 && args[2] === 36 && args[3] === 160 && args[4] === 90), 'comparison and saved images use the selected crop');
+    assert.equal(calls.some(call => call.op === 'slide'), !voiceOnly);
+    if (voiceOnly) {
+      assert.equal(draws.length, 0, 'voice mode never draws screenshots');
+      assert.equal(calls.some(call => call.op === 'detectRegion'), false);
+      assert.ok(calls.some(call => call.reason === 'voice-only-lesson-slides-disabled'));
+    }
+    if (!voiceOnly) assert.ok(draws.some(args => args.length === 9 && args[1] === 64 && args[2] === 36 && args[3] === 160 && args[4] === 90), 'comparison and saved images use the selected crop');
     assert.deepEqual(calls.filter(call => call.op === 'event').map(call => call.type), ['started', 'paused', 'resumed', 'ended']);
-    assert.ok(tracks.every(track => track.readyState === 'ended'));
+    assert.ok(stream.getTracks().every(track => track.readyState === 'ended'));
   } finally { await send('stop'); }
 });

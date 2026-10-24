@@ -58,3 +58,19 @@ The automated `npm run test:durability` writes 3,600 synthetic 399,000-byte chun
 - [ ] Keep fixture consent/source notes locally. Do not commit class voices, teacher names, meeting links or authentication data.
 - [ ] S2 visual scoring, S3 transcription/chunk joins, S4 local model benchmarks, S5 PDF mixed-direction layout and S6 owner notes ratings remain pending.
 - [ ] Run the unsigned installer on the owner's account; launch it and uninstall after verifying retained recordings. Installer creation alone is not an installation test.
+
+## Voice-only lesson (2026-10-24)
+- Reload LectureLens in Chrome's extensions page after building. Open an HTTPS lesson tab you have permission to record.
+- Choose **Voice only — This lesson has no slides**. Accept Terms of Service once if prompted. Verify the source notice describes audio only.
+- Check that you have recording permission, then choose **Check lesson audio**, play speech and check the sound meter. Start without selecting a slide area. Confirm lesson sound remains audible.
+- Reopen the extension: voice-only remains selected and locked. Switch to another browser tab and confirm the original lesson remains the source. Pause/resume, then **End & save**; wait for **Saved locally**.
+- In the desktop app, check the saved audio and generate notes/PDF without slides. Confirm there are no screenshot files and visual events contain `voice-only-lesson-slides-disabled`.
+- Repeat a short permitted recording with **Slides + voice**: preview, confirm crop, start, pause/resume and save. Check slide capture still works.
+- Enable the OS reduced-motion preference: decorative bars and hover movement should stop. Real tab behavior and final voice-only PDF must be verified manually; automated tests use mocks only.
+
+## One-time Terms of Service (2026-10-24)
+- Close the old desktop app, then run `npm run dev` and reload the Chrome extension. On a fresh profile, the desktop must show Terms of Service with an unchecked agreement and disabled Accept button. Not now/Escape closes the app without saving agreement.
+- Read and accept in either the desktop or extension. Reopen both: the agreement should stay hidden. Use desktop Settings > Terms of Service or the extension footer to read the same document without accepting again.
+- Before acceptance, extension preview is unavailable. If local acceptance cannot be saved, an error remains visible and capture stays unavailable.
+- Slides + voice: cloud auto-crop starts unchecked. Leave it off and select an area manually; there must be no Gemini request. To use automatic crop, explicitly enable the image-upload option before preview. After ending a session, it resets to off. Voice only never uploads images.
+- Do not delete a real user's acceptance to test onboarding. Automated checks use isolated temporary data: `.tools/dotnet/dotnet.exe run --project tests/TermsChecks/TermsChecks.csproj`, `npm run test:native`, and the mocked extension UI check documented in decisions.

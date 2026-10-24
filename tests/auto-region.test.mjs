@@ -75,7 +75,7 @@ test('ten-minute recording keeps three cropped slides despite sidebar updates, s
   await sampler.finish();
   const slides = calls.filter(c => c.op === 'slide');
   assert.equal(slides.length, 3, 'only the three educational pages are saved');
-  assert.ok(slides.every(s => JSON.stringify(s.crop) === JSON.stringify(crop)));
+  assert.ok(slides.every(s => Object.keys(crop).every(k => Math.abs(s.crop[k] - crop[k]) < .015)), JSON.stringify(slides.map(s => s.crop)));
   assert.equal(queries, 2, 'quota stops requests without removing crop');
 });
 

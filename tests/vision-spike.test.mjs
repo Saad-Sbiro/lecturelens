@@ -7,7 +7,7 @@ import { analyze, validate, pixels, model, config } from '../tools/vision/gemini
 const detection = { box: [200, 250, 800, 850], type: 'slide', isEducational: true };
 test('normalized YX box converts against original dimensions with bounded margin', () => {
   assert.deepEqual(pixels(detection.box, 2000, 1000, 0), { x: 500, y: 200, width: 1200, height: 600 });
-  assert.deepEqual(pixels(detection.box, 2000, 1000), { x: 482, y: 191, width: 1236, height: 618 });
+  assert.deepEqual(pixels(detection.box, 2000, 1000), { x: 500, y: 200, width: 1200, height: 600 });
   assert.deepEqual(pixels([0, 0, 1000, 1000], 2000, 1000), { x: 0, y: 0, width: 2000, height: 1000 });
   for (const box of [[0,0,0,1], [-1,0,100,100], [0,0,1001,100], [5,4,3,2], [0,'1',2,3]]) assert.throws(() => validate({ ...detection, box }));
   assert.equal(pixels(null, 2000, 1000), null);

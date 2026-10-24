@@ -76,3 +76,21 @@ test('C# host finalizes and exports, rejects sequence gaps and oversized packets
     assert.equal((await host.call('list'))[0].state, 'finished');
   } finally { await host.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+
+test('shared terms acceptance persists across host launches and rejects stale or implicit acceptance', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'lecturelens-terms-')); let host = client(root);
+  try {
+    const status = await host.call('termsStatus'); assert.equal(status.accepted, false);
+    await assert.rejects(host.call('acceptTerms', {version:status.version,accepted:false}));
+    await assert.rejects(host.call('acceptTerms', {version:'old',accepted:true}));
+    assert.equal((await host.call('termsStatus')).accepted, false);
+    assert.equal((await host.call('acceptTerms', {version:status.version,accepted:true})).accepted, true);
+    await host.close(); host = client(root);
+    assert.equal((await host.call('termsStatus')).accepted, true);
+    const saved = JSON.parse(await readFile(join(root,'terms-acceptance.json'),'utf8'));
+    assert.equal(saved.Version,status.version); assert.ok(Date.parse(saved.AcceptedAt));
+    await writeFile(join(root,'terms-acceptance.json'), '{broken');
+    assert.equal((await host.call('termsStatus')).accepted, false);
+  } finally {await host.close();await rm(root,{recursive:true,force:true});}
+});

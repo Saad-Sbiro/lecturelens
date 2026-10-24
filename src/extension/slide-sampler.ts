@@ -12,9 +12,9 @@ export function gray(canvas: HTMLCanvasElement) {
   const rgba = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
   return Uint8Array.from({ length: canvas.width * canvas.height }, (_, i) => Math.round(0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2]));
 }
-export function detectCrop(video: HTMLVideoElement) {
-  const width = 320, height = Math.max(1, Math.round(width * video.videoHeight / video.videoWidth));
-  return suggestCrop(gray(canvasFrame(video, fullCrop, width, height)), width, height);
+export function detectCrop(video: HTMLVideoElement, anchor?: Crop) {
+  const width = anchor ? 640 : 320, height = Math.max(1, Math.round(width * video.videoHeight / video.videoWidth));
+  return suggestCrop(gray(canvasFrame(video, fullCrop, width, height)), width, height, anchor);
 }
 type Candidate = { signature: Uint8Array; jpeg: string; atMs: number; crop: Crop; reason: string; review: boolean };
 export class SlideSampler {
@@ -26,6 +26,7 @@ export class SlideSampler {
   private last = -Infinity;
   private dimensions: string;
   private lastSlide = -1;
+  private cloudCrop?: Crop;
   saved = 0;
   readonly tracker: CropTracker;
   get currentCrop() { return this.crop; }
@@ -71,7 +72,17 @@ export class SlideSampler {
         if (Array.isArray(hints) && hints[0] && validCrop(hints[0])) proposal = { crop: hints[0], confidence: 0.8 };
       } catch { /* No DOM access: retain a review candidate, never stop audio. */ }
     }
-    const region = this.regionProvider?.() ?? this.tracker.observe(proposal);
+    let region = this.regionProvider?.() ?? this.tracker.observe(proposal);
+    if (this.regionProvider && region.crop.width < .98) {
+      // Cloud checks are throttled; track the known slide's edges locally on
+      // every sample so a resize cannot become a padded duplicate in that gap.
+      const fresh = !this.cloudCrop || ['x', 'y', 'width', 'height'].some(key => region.crop[key as keyof Crop] !== this.cloudCrop![key as keyof Crop]);
+      const anchor = fresh ? region.crop : this.crop;
+      this.cloudCrop = { ...region.crop };
+      const local = detectCrop(this.video, anchor);
+      if (local.confidence >= .90) region = { crop: local.crop, reason: 'local-slide-boundary', review: false };
+      else region = { ...region, crop: anchor };
+    }
     this.crop = region.crop; this.status = region.reason;
     await this.log(atMs, region.reason);
     const signature = gray(canvasFrame(this.video, this.crop, config.compareWidth, config.compareHeight));

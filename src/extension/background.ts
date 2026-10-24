@@ -1,8 +1,16 @@
 import text from '../../config/browser-ui.json';
+import terms from '../../config/terms.json';
 import { registerNativeRelay } from './native-relay';
 import { presentationRects } from './layout-hints';
 
 registerNativeRelay();
+
+async function agreement(op: 'termsStatus' | 'acceptTerms', accepted = false) {
+  const reply = await chrome.runtime.sendNativeMessage('local.lecturelens.capture', { requestId: 'terms', op, version: terms.version, accepted });
+  if (!reply?.ok) throw new Error(reply?.error ?? text.connectFailed);
+  if (reply.value?.version !== terms.version) throw new Error(text.termsVersionMismatch);
+  return reply;
+}
 
 async function offscreen(op: string, data: Record<string, unknown> = {}) {
   if (!await chrome.offscreen.hasDocument()) {
@@ -36,9 +44,11 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (message.op === 'crop') return offscreen('crop', { crop: message.crop });
       throw new Error('Unsupported operation');
     }
+    if (message.op === 'termsStatus') return agreement('termsStatus');
+    if (message.op === 'acceptTerms') return agreement('acceptTerms', message.accepted === true);
     if (message.op === 'openCrop') {
       const current = await offscreen('status');
-      if (current.value?.state !== 'previewing') throw new Error(text.sourceLocked);
+      if (current.value?.state !== 'previewing' || current.value?.lessonMode === 'voice') throw new Error(text.sourceLocked);
       await chrome.windows.create({ url: chrome.runtime.getURL('crop.html'), type: 'popup', state: 'maximized' });
       return { ok: true };
     }
@@ -49,12 +59,13 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         const current = await offscreen('status');
         if (!['idle', 'finished', 'failed'].includes(current.value?.state)) throw new Error(text.sourceLocked);
         if (message.consent !== true) throw new Error(text.consentRequired);
+        if (!(await agreement('termsStatus')).value.accepted) throw new Error(text.consentRequired);
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab?.id || tab.id !== message.tabId || !tab.url?.startsWith('https://')) throw new Error(text.unavailable);
         await chrome.storage.session.set({ selectedTab: tab.id, selectedUrl: tab.url });
         // Always pass targetTabId. Tab activation changes never retarget this stream.
         const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-        return await offscreen('preview', { streamId, tabId: tab.id, title: tab.title ?? text.selected });
+        return await offscreen('preview', { streamId, tabId: tab.id, title: tab.title ?? text.selected, lessonMode: message.lessonMode === 'voice' ? 'voice' : 'slides', cloudConsent: message.cloudConsent === true });
       } finally { choosing = false; }
     }
     if (message.op === 'crop') return offscreen('crop', { crop: message.crop });

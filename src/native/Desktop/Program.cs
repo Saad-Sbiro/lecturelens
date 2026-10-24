@@ -66,6 +66,7 @@ public static class Program
             window.Content = view;
             new SessionPanel(view).Attach();
             new NotesStudio(view).Attach();
+            TermsNotice.Attach(view, smoke);
             reloads++;
         }
         var debounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };

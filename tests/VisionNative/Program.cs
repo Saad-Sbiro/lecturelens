@@ -4,7 +4,7 @@ var root = Path.Combine(Path.GetTempPath(), "lens-vision-" + Guid.NewGuid());
 try {
  var handler = new MockHandler(); using var http = new HttpClient(handler);
  var first = JsonSerializer.SerializeToElement(await GeminiVision.Detect("/9j/2Q==", http, root));
- if (first.GetProperty("detection").GetProperty("crop").GetProperty("width").GetDouble() <= .6) throw new Exception("Margin missing");
+ if (first.GetProperty("detection").GetProperty("crop").GetProperty("width").GetDouble() != .6) throw new Exception("Unexpected crop margin");
  await GeminiVision.Detect("/9j/2Q==", http, root);
  if (handler.Calls != 1) throw new Exception("Duplicate request escaped cache");
  var usage = Directory.GetFiles(root, "*.usage.json").Single();
@@ -25,7 +25,7 @@ try {
  if (!malformed.GetProperty("error").GetString()!.Contains("valid slide coordinates")) throw new Exception("Invalid response hidden");
  using var invalid = JsonDocument.Parse("{\"box\":[500,0,100,100],\"type\":\"slide\",\"isEducational\":true}");
  try { GeminiVision.Validate(invalid.RootElement); throw new Exception("Invalid box accepted"); } catch (InvalidDataException) { }
- Console.WriteLine("PASS native vision request, margin, cache, token usage, invalid bounds and quota fallback (offline)");
+ Console.WriteLine("PASS native vision request, exact bounds, cache, token usage, invalid bounds and quota fallback (offline)");
 } finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
 sealed class MockHandler : HttpMessageHandler {
  internal int Calls; internal bool Quota, Timeout, Malformed, Unavailable;

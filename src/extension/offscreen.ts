@@ -18,6 +18,8 @@ let ending: Promise<void> | undefined, pump: Promise<void> | undefined;
 let started = 0, eventIndex = 0;
 let crop: Crop = fullCrop, cropConfirmed = false, cropConfidence = 0;
 let cropMode: CropMode = 'manual';
+let lessonMode: 'slides' | 'voice' = 'slides';
+let cloudConsent = false;
 let sampler: SlideSampler | undefined;
 let autoRegion: AutoRegion | undefined, vision: NativeClient | undefined;
 function disableAuto() { autoRegion?.close(); autoRegion = undefined; vision?.close(); vision = undefined; }
@@ -88,9 +90,11 @@ async function stop(reason = 'user-stop') {
   })();
   try { await ending; } finally { ending = undefined; }
 }
-async function preview(streamId: string) {
+async function preview(streamId: string, mode: 'slides' | 'voice', allowCloud: boolean) {
   if (!['idle', 'finished', 'failed'].includes(state)) throw new Error(text.sourceLocked);
   state = 'loading'; error = ''; id = ''; packets = 0; recentAudio = -Infinity; sampler = undefined; cropConfirmed = false; cropMode = 'manual';
+  lessonMode = mode; started = 0; level = 0;
+  cloudConsent = lessonMode === 'slides' && allowCloud;
   try {
     native = new NativeClient(); await native.call('hello');
     native.onDisconnect = () => { error = text.connectFailed; void stop('native-disconnected'); };
@@ -99,15 +103,15 @@ async function preview(streamId: string) {
       // Chrome's tab-stream selector uses legacy constraints. Mixing standard
       // audio fields beside `mandatory` causes Chrome to reject the whole request.
       audio: { mandatory },
-      video: { mandatory: { ...mandatory, maxWidth: visualConfig.captureWidth, maxHeight: visualConfig.captureHeight, maxFrameRate: visualConfig.captureFps } },
+      video: lessonMode === 'voice' ? false : { mandatory: { ...mandatory, maxWidth: visualConfig.captureWidth, maxHeight: visualConfig.captureHeight, maxFrameRate: visualConfig.captureFps } },
     } as unknown as MediaStreamConstraints);
-    video.srcObject = stream; await video.play();
+    if (lessonMode === 'slides') { video.srcObject = stream; await video.play(); }
     crop = fullCrop; cropConfidence = 0;
     listening = new AudioContext(); listening.createMediaStreamSource(stream).connect(listening.destination); await listening.resume();
     meter = new SoundMeter(stream); await meter.start();
     stream.getTracks().forEach(track => track.addEventListener('ended', () => { void stop('source-ended'); }, { once: true }));
     state = 'previewing'; badge('VIEW');
-    enableAuto(); updateAuto();
+    if (cloudConsent) { enableAuto(); updateAuto(); }
     let tick = 0;
     timer = setInterval(() => {
       level = meter?.level() ?? 0;
@@ -122,10 +126,10 @@ async function preview(streamId: string) {
     }, 100);
   } catch (e) { await release(); state = 'failed'; error = e instanceof Error ? e.message : String(e); throw e; }
 }
-async function command(message: { op: string; streamId?: string; reason?: string; title?: string; crop?: Crop; mode?: CropMode; largePreview?: boolean }) {
+async function command(message: { op: string; streamId?: string; reason?: string; title?: string; crop?: Crop; mode?: CropMode; largePreview?: boolean; lessonMode?: 'slides' | 'voice'; cloudConsent?: boolean }) {
   if (message.op === 'status') {
     let image: string | undefined;
-    if (stream && video.readyState >= 2) {
+    if (lessonMode === 'slides' && stream && video.readyState >= 2) {
       const canvas = document.createElement('canvas');
       const scale = Math.min(1, (message.largePreview ? 1920 : 480) / video.videoWidth);
       canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
@@ -133,10 +137,11 @@ async function command(message: { op: string; streamId?: string; reason?: string
       canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height);
       image = canvas.toDataURL('image/jpeg', message.largePreview ? 0.94 : 0.65);
     }
-    return { state, error, sourceTitle, packets, level, image, crop: sampler?.currentCrop ?? crop, cropMode, visualStatus: autoRegion?.region.reason ?? sampler?.status, cropConfidence, cropConfirmed, slides: sampler?.saved ?? 0, elapsedMs: started ? performance.now() - started : 0 };
+    return { state, error, sourceTitle, packets, level, image, lessonMode, cloudConsent, crop: sampler?.currentCrop ?? crop, cropMode, visualStatus: autoRegion?.region.reason ?? sampler?.status, cropConfidence, cropConfirmed, slides: sampler?.saved ?? 0, elapsedMs: started ? performance.now() - started : 0 };
   }
-  if (message.op === 'preview') { sourceTitle = message.title ?? text.selected; return preview(message.streamId!); }
-  if (message.op === 'autoCrop') { if (state !== 'previewing') throw new Error(text.sourceLocked); enableAuto(); updateAuto(); return; }
+  if (message.op === 'preview') { sourceTitle = message.title ?? text.selected; return preview(message.streamId!, message.lessonMode === 'voice' ? 'voice' : 'slides', message.cloudConsent === true); }
+  if (lessonMode === 'voice' && ['crop', 'cropMode', 'autoCrop'].includes(message.op)) throw new Error(text.sourceLocked);
+  if (message.op === 'autoCrop') { if (state !== 'previewing' || !cloudConsent) throw new Error(text.cloudConsentRequired); enableAuto(); updateAuto(); return; }
   if (message.op === 'cropMode') {
     if (state !== 'previewing' || !['auto', 'manual'].includes(message.mode!)) throw new Error(text.invalidCrop);
     cropMode = message.mode!; cropConfirmed = cropMode === 'auto'; return;
@@ -149,19 +154,20 @@ async function command(message: { op: string; streamId?: string; reason?: string
   if (message.op === 'start') {
     if (state !== 'previewing') throw new Error(text.sourceLocked);
     if (performance.now() - recentAudio > 5000) throw new Error(text.noSignal);
-    if (video.readyState < 2) throw new Error(text.noVideo);
-    if (!cropConfirmed) throw new Error(text.confirmCrop);
+    if (lessonMode === 'slides' && video.readyState < 2) throw new Error(text.noVideo);
+    if (lessonMode === 'slides' && !cropConfirmed) throw new Error(text.confirmCrop);
     const mime = chooseMimeType(true);
     id = (await native!.call('create', { consent: true, mime })).id;
     started = performance.now(); eventIndex = 0;
     try {
       const clock = () => performance.now() - started;
-      sampler = new SlideSampler(video, crop, native!, id, clock, e => { error = String(e); void stop('visual-error'); }, cropMode,
+      if (lessonMode === 'voice') await native!.call('visualEvent', { id, atMs: 0, reason: 'voice-only-lesson-slides-disabled', crop: fullCrop });
+      else sampler = new SlideSampler(video, crop, native!, id, clock, e => { error = String(e); void stop('visual-error'); }, cropMode,
         autoRegion ? () => autoRegion?.region ?? { crop, reason: 'auto-unavailable', review: true } : undefined);
       const audioStream = new MediaStream(stream!.getAudioTracks());
       session = await new BrowserMediaSource(audioStream, mime, { now: clock }).start({ signal: new AbortController().signal, timeoutMs: 15000 });
       state = 'recording'; badge('REC'); pump = save();
-      sampler.tick();
+      sampler?.tick();
     } catch (e) { error = String(e); await release(); state = 'failed'; throw e; }
     return;
   }

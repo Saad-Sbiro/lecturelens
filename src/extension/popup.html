@@ -1,10 +1,15 @@
 <!doctype html><html><head><meta charset="UTF-8"><title>LectureLens</title><link rel="stylesheet" href="./popup.css"></head><body>
 <header><span class="logo"><img src="../assets/logomark.png" alt="LectureLens"></span><div><h1>Lecture<span class="brand-accent">Lens</span></h1><small data-text="eyebrow"></small></div><span class="local-dot" title="Local recording"></span></header>
 <section class="source"><span class="eyebrow" data-text="selected"></span><p id="tab"></p><p class="muted" data-text="privacy"></p></section>
-<label class="consent"><input id="consent" type="checkbox"><span data-text="consent"></span></label>
-<button id="preview" class="primary wide" data-text="preview"></button>
-<section class="card"><div class="section-label" data-text="previewLabel"></div><div id="cropStage"><img id="image" alt="" hidden><div id="cropBox" hidden></div></div><button id="openCrop" class="wide" data-text="openCrop" disabled></button><button id="autoCrop" class="wide" data-text="autoCrop" disabled></button><p id="cropStatus" class="muted"></p></section>
-<section class="audio"><span class="eyebrow" data-text="soundLabel"></span><progress id="meter" max="0.2" value="0"></progress><small data-text="signal"></small></section>
+<fieldset id="lessonFormat"><legend data-text="lessonFormat"></legend><div class="mode-options"><label class="mode-option"><input type="radio" name="lessonMode" value="slides" checked><span class="mode-icon" aria-hidden="true">▣</span><span><strong data-text="slidesMode"></strong><small data-text="slidesHint"></small></span></label><label class="mode-option"><input type="radio" name="lessonMode" value="voice"><span class="mode-icon" aria-hidden="true">♫</span><span><strong data-text="voiceMode"></strong><small data-text="voiceHint"></small></span></label></div></fieldset>
+<section id="agreementNotice" class="agreement-notice" hidden><label class="consent"><input id="consent" type="checkbox"><span data-text="agreeTerms"></span></label><div class="agreement-actions"><button id="readTerms" class="text-button" data-text="readTerms"></button><button id="acceptTerms" data-text="termsAccept" disabled></button></div></section>
+<div id="cloudChoice"><label class="consent"><input id="cloudConsent" type="checkbox"><span data-text="cloudOption"></span></label><p class="muted cloud-details" data-text="cloudDetails"></p></div>
+<p id="recordingNotice" class="muted" data-text="recordingNotice"></p>
+<button id="preview" class="primary wide" data-text="preview" disabled></button>
+<section class="voice-card" id="voiceCard" hidden><div class="voice-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div><h2 data-text="voiceTitle"></h2><p class="muted" data-text="voiceDescription"></p></div></section>
+<section class="card" id="slideCard"><div class="section-label" data-text="previewLabel"></div><div id="cropStage"><img id="image" alt="" hidden><div id="cropBox" hidden></div></div><button id="openCrop" class="wide" data-text="openCrop" disabled></button><button id="autoCrop" class="wide" data-text="autoCrop" disabled></button><p id="cropStatus" class="muted"></p></section>
+<section class="audio"><span class="eyebrow" id="soundLabel" data-text="soundLabel"></span><progress id="meter" aria-labelledby="soundLabel" max="0.2" value="0"></progress><small data-text="signal"></small></section>
 <div class="controls"><button id="start" class="primary" data-text="start" disabled></button><button id="pause" data-text="pauseOnly" disabled></button><button id="stop" class="danger" data-text="stop" disabled></button></div>
-<p id="status" role="status"></p><p id="error" role="alert"></p><footer data-text="limitation"></footer>
+<p id="status" role="status"></p><p id="error" role="alert"></p><footer><span data-text="sessionPrivacy"></span><button id="termsLink" class="text-button" data-text="termsLink"></button></footer>
+<dialog id="termsDialog" aria-labelledby="termsTitle"><h2 id="termsTitle"></h2><div id="termsContent"></div><button id="closeTerms" data-text="close"></button></dialog>
 <script type="module" src="./popup.ts"></script></body></html>

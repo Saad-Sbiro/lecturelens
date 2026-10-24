@@ -9,8 +9,9 @@ function harness() {
   const listeners = {}, captures = [], messages = [], layoutTargets = [];
   let tab = { id: 7, url: 'https://class.example.test', title: 'Synthetic lesson' }, state = 'idle', selectedTab, selectedUrl, hasDocument = false;
   const event = name => ({ addListener(fn) { listeners[name] = fn; } });
+  let accepted = true;
   const chrome = {
-    runtime: { id: 'test', getURL: file => `chrome-extension://test/${file}`, onConnect: event('connect'), onMessage: event('message'), async sendMessage(message) {
+    runtime: { async sendNativeMessage(host, request) { assert.equal(host, 'local.lecturelens.capture'); if (request.op === 'acceptTerms') accepted = request.accepted === true; return {ok:true,value:{accepted,version:request.version}}; }, id: 'test', getURL: file => `chrome-extension://test/${file}`, onConnect: event('connect'), onMessage: event('message'), async sendMessage(message) {
       messages.push(message); if (message.op === 'preview') state = 'previewing'; if (message.op === 'stop') state = 'idle';
       return { ok: true, value: { state } };
     } },
@@ -23,10 +24,20 @@ function harness() {
     action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
   };
   vm.runInNewContext(code, { chrome, console });
-  return { listeners, captures, messages, layoutTargets, setTab(value) { tab = value; }, send(op, extra = {}) {
+  return { listeners, captures, messages, layoutTargets, setAccepted(value) { accepted = value; }, setTab(value) { tab = value; }, send(op, extra = {}) {
     return new Promise(resolve => listeners.message({ target: 'background', op, ...extra }, { id: 'test', url: chrome.runtime.getURL('popup.html') }, resolve));
   } };
 }
+
+test('voice-only selection reaches capture without weakening consent or source locking', async () => {
+  const h = harness();
+  assert.equal((await h.send('preview', { consent: false, tabId: 7, lessonMode: 'voice' })).ok, false);
+  assert.equal(h.captures.length, 0);
+  assert.equal((await h.send('preview', { consent: true, tabId: 7, lessonMode: 'voice' })).ok, true);
+  assert.equal(h.messages.find(message => message.op === 'preview').lessonMode, 'voice');
+  assert.equal(h.captures[0].targetTabId, 7);
+  assert.equal((await h.send('preview', { consent: true, tabId: 7, lessonMode: 'slides' })).ok, false);
+});
 test('selected tab reload keeps the existing stream; a different page still stops', async () => {
   const h = harness();
   assert.equal((await h.send('preview', { consent: true, tabId: 7 })).ok, true);
@@ -83,4 +94,15 @@ test('large crop editor can inspect and crop the existing source but cannot star
   assert.equal((await editor('preview')).ok, false);
   assert.equal((await editor('start')).ok, false);
   assert.equal(h.captures.length, 1);
+});
+
+
+test('terms must be accepted before capture; checkbox claims cannot bypass stored acceptance', async () => {
+  const h = harness(); h.setAccepted(false);
+  assert.equal((await h.send('termsStatus')).value.accepted, false);
+  assert.equal((await h.send('preview', {consent:true,tabId:7})).ok, false);
+  assert.equal(h.captures.length, 0);
+  assert.equal((await h.send('acceptTerms', {accepted:true})).value.accepted, true);
+  assert.equal((await h.send('preview', {consent:true,tabId:7})).ok, true);
+  assert.equal(h.messages.find(m => m.op === 'preview').cloudConsent, false);
 });

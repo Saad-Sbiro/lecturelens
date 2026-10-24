@@ -36,6 +36,12 @@ internal static partial class Program
                     switch (op)
                     {
                         case "hello": value = new { version = 1, freeBytes = store.FreeBytes() }; break;
+                        case "termsStatus":
+                            value = new { accepted = new TermsAgreement(store.Root).IsAccepted(), version = TermsAgreement.Document.Version }; break;
+                        case "acceptTerms":
+                            if (!request.GetProperty("accepted").GetBoolean()) throw new InvalidDataException("Explicit acceptance required.");
+                            new TermsAgreement(store.Root).Accept(request.GetProperty("version").GetString()!);
+                            value = new { accepted = true, version = TermsAgreement.Document.Version }; break;
                         case "detectRegion" when !test:
                             if (active != null || !request.GetProperty("consent").GetBoolean()) throw new InvalidDataException("Vision needs a separate connection and image consent");
                             value = GeminiVision.Detect(request.GetProperty("data").GetString()!).GetAwaiter().GetResult(); break;

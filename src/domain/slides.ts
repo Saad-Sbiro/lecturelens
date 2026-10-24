@@ -32,7 +32,7 @@ export class SlideIndex {
 }
 // A deliberately conservative geometric proposal, never a claim of semantic recognition.
 // Long rectangular borders can reveal a slide nested inside an editor/video frame.
-export function suggestCrop(gray: Uint8Array, width: number, height: number): { crop: Crop; confidence: number } {
+export function suggestCrop(gray: Uint8Array, width: number, height: number, anchor?: Crop): { crop: Crop; confidence: number } {
   const rows = new Float64Array(height), cols = new Float64Array(width);
   const edge = (x: number, y: number) => Math.max(Math.abs(gray[y * width + x] - gray[y * width + Math.max(0, x - 1)]), Math.abs(gray[y * width + x] - gray[Math.max(0, y - 1) * width + x]));
   for (let y = 1; y < height; y++) for (let x = 1; x < width; x++) { const e = edge(x, y); if (e > 22) { rows[y]++; cols[x]++; } }
@@ -41,14 +41,22 @@ export function suggestCrop(gray: Uint8Array, width: number, height: number): { 
     for (const i of Array.from(values.keys()).sort((a, b) => values[b] - values[a])) {
       if (values[i] < 8) break;
       if (selected.every(j => Math.abs(j - i) > 3)) selected.push(i);
-      if (selected.length === 10) break;
+      if (selected.length === (anchor ? 18 : 10)) break;
     }
     return selected.sort((a, b) => a - b);
   };
   const xs = peaks(cols), ys = peaks(rows); let best = 0, crop = fullCrop;
   for (const left of xs) for (const right of xs) for (const top of ys) for (const bottom of ys) {
     const w = right - left, h = bottom - top, area = w * h / (width * height), ratio = w / h;
-    if (w <= 0 || h <= 0 || area < 0.12 || area > 0.92 || ratio < 1.15 || ratio > 2.1) continue;
+    if (w <= 0 || h <= 0 || area < (anchor ? .03 : .12) || area > 0.92 || ratio < 1.15 || ratio > 2.1) continue;
+    if (anchor) {
+      const scale = area / (anchor.width * anchor.height);
+      const aspect = ratio / (anchor.width * width / (anchor.height * height));
+      const dx = Math.abs((left + w / 2) / width - (anchor.x + anchor.width / 2));
+      const dy = Math.abs((top + h / 2) / height - (anchor.y + anchor.height / 2));
+      // Follow a nearby slide boundary, not a thumbnail or an internal textbox.
+      if (scale < .45 || scale > 1.8 || aspect < .97 || aspect > 1.03 || dx > anchor.width * .4 || dy > anchor.height * .4) continue;
+    }
     let support = 0;
     for (let x = left; x <= right; x++) { if (edge(x, top) > 22) support++; if (edge(x, bottom) > 22) support++; }
     for (let y = top; y <= bottom; y++) { if (edge(left, y) > 22) support++; if (edge(right, y) > 22) support++; }
