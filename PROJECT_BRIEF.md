@@ -11,7 +11,7 @@
 
 LectureLens is an **installable desktop app** (a mobile app comes later). While an online class runs on the user's computer, the app records the class's screen and sound, automatically finds the important slides, transcribes the teacher's speech, and when the user clicks **End** produces a **PDF of study notes**. The notes are written in simple language and include the important slide screenshots, placed where they belong.
 
-- **v1 scope:** a desktop app for the owner's computer, for classes that run **in a web browser** (any meeting platform's web client). Later capture sources: desktop meeting apps (Zoom, Teams and similar), then a mobile app.
+- **Current scope (owner expansion, 2026-10-24):** browser lessons plus Windows desktop lesson windows, including Zoom, Microsoft Teams and Discord. Desktop window capture is experimental until the owner completes the real-app matrix; mobile remains later.
 - **Not a website:** the product is not a hosted web app. A small public page for downloads and a demo is fine in Phase 3.
 - **Languages:** French is the first enabled teacher language. The design supports any language through configuration, and nothing in the code may assume French.
 - **Cost model:** everything is **free to build and run at the start**. Every paid-grade capability sits behind a swappable interface. If v1 proves valuable, we **invest by switching a configuration profile** (stronger speech, vision and language models, hosting, code signing), not by rewriting.
@@ -32,7 +32,7 @@ One start, one end, one PDF. While the class runs, the app watches the shared co
 - **Secondary:** classmates who receive the PDF.
 
 ### 1.4 Non-goals for v1
-Live captions, real-time notes during class, speaker identification, a mobile app (planned after v1), capture of desktop meeting apps (planned, §4.2 and Phase 4), a hosted web version, teacher-facing features, social features, payments, and a full document editor.
+Live captions, real-time notes during class, speaker identification, a mobile app (planned after v1), a hosted web version, teacher-facing features, social features, payments, and a full document editor.
 
 ---
 
@@ -40,7 +40,7 @@ Live captions, real-time notes during class, speaker identification, a mobile ap
 
 | # | Rule | Meaning |
 |---|---|---|
-| R1 | **Desktop-first, class in a browser** | The product is an installable desktop app. v1 records a class that runs in a web browser on the same computer, by capturing the browser window (§4.2). Later: desktop meeting apps, then a mobile app. Core logic must not depend on the desktop shell, so a mobile app can reuse it. |
+| R1 | **Desktop-first** | The installable app captures an isolated browser tab or a selected desktop lesson window (§4.2). Desktop capture is experimental; mobile is later. Core logic must not depend on the desktop shell. |
 | R2 | **Free-first** | Build, test and run v1 at zero cost with no credit card. "Free" means on-device or open-source, or a permanent free tier. Expiring trial credits do not count. Every external capability needs a free path. Paid-only dependencies are not allowed in v1. Verify every free limit in the official docs before integrating. Paid-grade options are added later as adapters behind the same interfaces (§7), never built now. Desktop distribution in v1 means unsigned builds for the owner and friends; paid signing and store fees wait for §7.5 (see §7.6). |
 | R3 | **Technology-neutral** | The domain logic never names a vendor or model. Everything external sits behind a capability interface (§6.2). The agent picks concrete technologies in Phase 0 and records why in `docs/decisions.md`. |
 | R4 | **Scalable by design** | Scale comes from structure (modules, config, stateless stages, queue-ready jobs), not from infrastructure we do not need yet. |
@@ -86,9 +86,9 @@ The default path is zero-interaction after End. Review is optional and happens a
 | Course profile | save preferences and crop region under a name | none |
 
 ### 4.2 Capture
-**Current owner decision (2026-10-21):** MVP targets Chrome + BigBlueButton through a companion extension that captures one selected tab's picture and sound. Other tabs must remain excluded when the user switches tabs. Zoom/Teams desktop apps are deferred. The owner confirmed that the previous window-capture prototype changes recorded content when switching tabs; it does not satisfy this requirement. Tab isolation remains unverified until S1 extension tests pass. The old candidates below are historical alternatives, not the current default.
+**Current owner decision (2026-10-24):** add desktop lessons from Zoom, Microsoft Teams and Discord. Keep Chrome + BigBlueButton's companion extension for isolated tab picture and sound. Desktop capture selects one window and uses Windows system loopback with explicit consent that ALL computer sound is included; no microphone or per-app audio isolation is claimed. Local audio packets and slide candidates use the existing storage, recovery and notes pipeline. Desktop capture remains experimental until the owner runs `docs/desktop-capture-checklist.md`. No live calls are captured by automated tests.
 
-**Source abstraction.** Capture is a `CaptureSource` capability (§6.2). v1 uses a selected browser-tab adapter and a replay-from-files adapter. Later sources must plug in without touching analysis code.
+**Source abstraction.** Capture is a `CaptureSource` capability (§6.2). Current adapters cover selected browser tabs, experimental desktop windows and replay from files. Later sources must plug in without touching analysis code.
 
 **How the class is captured (options to test in S1)**
 - **A. Window capture (default candidate).** The user picks the browser window that shows the class. It also works later for desktop meeting apps, which are windows too. Consequences: the window shows whichever tab is active, so **switching tabs inside that window changes what is recorded**, and a desktop app cannot capture one single tab from outside the browser. Mitigations: guidance to keep the class in its own browser window, instant Pause (global shortcut), rejection of non-lesson frames by the importance cascade (§4.3), and a warning when the window title or layout changes.
@@ -353,7 +353,7 @@ Long-session test (≥2 hours), quota handling and fallbacks, usage meter, error
 **Acceptance:** Definition of Done (§10).
 
 ### Phase 4: Growth (only after §7.5 triggers)
-Premium profile, accounts, sharing, auto language detection, more capture sources (desktop meeting apps such as Zoom and Teams through the same window mechanism, with sound routing checked per app ⚠; a browser-extension variant for single-tab capture that avoids the picker and background limits ✔; and a **mobile app**: first for in-person classes with the microphone and photos of the board, then research whether recording an online class on a phone is possible on each mobile operating system ⚠), live notes.
+Premium profile, accounts, sharing, auto language detection, and a **mobile app**: first for in-person classes with the microphone and photos of the board, then research whether recording an online class on a phone is possible on each mobile operating system ⚠. Live notes remain later. Browser-tab capture and experimental desktop-window capture were brought forward by owner decisions in §4.2; sound routing and real-app reliability still require the owner-run matrix.
 
 ---
 

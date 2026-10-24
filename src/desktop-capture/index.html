@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; media-src 'self' blob:; connect-src 'none'; img-src 'self' data:; object-src 'none'">
+<title>LectureLens · Desktop capture</title><link rel="stylesheet" href="./style.css"></head>
+<body><main>
+<header><span class="brand">LECTURELENS</span><span class="pill">Desktop capture · Preview</span></header>
+<h1>A lesson from any window.</h1><p>Open Zoom, Microsoft Teams, Discord, or another lesson app. Choose its lesson window below.</p>
+<section><label for="windows">Lesson window</label><div class="row"><select id="windows"></select><button id="refresh">Refresh</button></div>
+<label class="consent"><input id="consent" type="checkbox"> I have permission to record. I understand that ALL computer sound, including other apps and notifications, will be recorded. My microphone is not included.</label>
+<button id="preview" class="primary">Preview selected window</button><button id="reset">Change window</button></section>
+<div class="stage"><video muted autoplay playsinline></video><canvas id="crop"></canvas><span id="placeholder">Your selected window will appear here</span></div>
+<p class="hint">Drag over the preview to select the slide area, or keep the full window. Keep the lesson window open and restored; minimized or protected windows may stop updating.</p>
+<div class="row"><label class="consent"><input id="full" type="checkbox" checked> Use full window for slides</label><label class="consent"><input id="voice" type="checkbox"> Audio only (no slides)</label></div>
+<div class="row"><meter id="sound" min="0" max="0.1" value="0" aria-label="Computer sound level"></meter><span id="audio">Play lesson audio to check sound before starting.</span></div>
+<footer><button id="start" class="primary" disabled>Start recording</button><button id="pause" disabled>Pause</button><button id="stop" disabled>Stop and save</button><strong id="status" role="status">Choose a window</strong></footer>
+<p id="error" role="alert"></p><p class="hint">Audio and selected slides are saved locally as you record. After stopping, return to your recordings in LectureLens to transcribe and create notes.</p>
+</main><script type="module" src="./renderer.ts"></script></body></html>

@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.extension.json","include":["src/desktop-capture/**/*.ts"]}

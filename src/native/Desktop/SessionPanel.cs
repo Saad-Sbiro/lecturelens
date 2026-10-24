@@ -19,6 +19,7 @@ internal sealed class SessionPanel(FrameworkElement view)
     private string? selectionId;
     public void Attach()
     {
+        ((Button)view.FindName("DesktopCapture")).Click += async (_, _) => await Run(() => { DesktopCapture.Open(); return Task.CompletedTask; });
         ((Button)view.FindName("MergeRecordings")).Click += async (_, _) => await Run(async () => {
             if (NotesStudio.IsGenerating) return;
             var lessons = await Task.Run(store.List);

@@ -18,12 +18,13 @@ internal static class Notifications
         var descriptor = DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
         EventHandler changed = (_, _) => {
             timer.Stop();
+            var wasVisible = toast.Visibility == Visibility.Visible;
             toast.Visibility = string.IsNullOrWhiteSpace(message.Text) ? Visibility.Collapsed : Visibility.Visible;
-            if (toast.Visibility == Visibility.Visible) timer.Start();
+            if (toast.Visibility == Visibility.Visible) { if (!wasVisible) Motion.Enter(toast); timer.Start(); }
         };
         descriptor.AddValueChanged(message, changed);
         ((Button)view.FindName("DismissNotification")).Click += (_, _) => { timer.Stop(); toast.Visibility = Visibility.Collapsed; };
-        view.Unloaded += (_, _) => { timer.Stop(); descriptor.RemoveValueChanged(message, changed); };
+        view.Unloaded += (_, _) => { timer.Stop(); toast.BeginAnimation(UIElement.OpacityProperty, null); descriptor.RemoveValueChanged(message, changed); };
     }
 
     internal static void PdfReady(FrameworkElement view, string path)

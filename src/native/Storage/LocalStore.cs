@@ -31,7 +31,10 @@ public sealed partial class LocalStore(string root) : IRecordingStorage, IDispos
     }
     private static void WriteJson(string file, object value) => Write(file, JsonSerializer.SerializeToUtf8Bytes(value, Json));
     public string Create(string mime)
+        => Create(mime, "browser-tab");
+    public string Create(string mime, string source)
     {
+        if (source is not ("browser-tab" or "desktop-window")) throw new InvalidDataException("Unsupported capture source");
         if (mime is not ("audio/wav" or "audio/webm;codecs=opus" or "video/webm;codecs=vp8,opus" or "video/webm;codecs=vp9,opus" or "video/webm")) throw new InvalidDataException("Unsupported media type");
         if (active != null) throw new InvalidOperationException("A session is already active");
         Directory.CreateDirectory(Root);
@@ -40,7 +43,7 @@ public sealed partial class LocalStore(string root) : IRecordingStorage, IDispos
         {
             var id = Guid.NewGuid().ToString(); var folder = Folder(id); Directory.CreateDirectory(folder);
             sessionLock = new FileStream(Path.Combine(folder, "active.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-            WriteJson(Path.Combine(folder, "manifest.json"), new { schemaVersion = 1, ownerId = "local", id, mimeType = mime, createdAt = DateTimeOffset.UtcNow.ToString("O"), source = "browser-tab" });
+            WriteJson(Path.Combine(folder, "manifest.json"), new { schemaVersion = 1, ownerId = "local", id, mimeType = mime, createdAt = DateTimeOffset.UtcNow.ToString("O"), source });
             active = id; next = 0; lastMs = 0; return id;
         }
         catch { Dispose(); throw; }

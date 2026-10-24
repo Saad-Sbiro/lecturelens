@@ -1,6 +1,5 @@
 import { visualConfig as config } from '../../config/visual';
 import { difference, SlideIndex, suggestCrop, validCrop, type Crop, fullCrop } from '../domain/slides';
-import type { NativeClient } from './native-client';
 import { CropTracker, overlap, assessContent, type CropMode } from '../domain/visual-policy';
 
 export function canvasFrame(video: HTMLVideoElement, crop: Crop, width: number, height: number) {
@@ -31,7 +30,7 @@ export class SlideSampler {
   readonly tracker: CropTracker;
   get currentCrop() { return this.crop; }
   status = 'waiting-for-sample';
-  constructor(private video: HTMLVideoElement, private crop: Crop, private host: NativeClient, private id: string, private clock: () => number, private failed: (e: unknown) => void, mode: CropMode = 'manual', private regionProvider?: () => { crop: Crop; reason: string; review: boolean }) {
+  constructor(private video: HTMLVideoElement, private crop: Crop, private host: { call(op: string, data: Record<string, unknown>): Promise<unknown> }, private id: string, private clock: () => number, private failed: (e: unknown) => void, mode: CropMode = 'manual', private regionProvider?: () => { crop: Crop; reason: string; review: boolean }) {
     if (!validCrop(crop)) throw new Error('Invalid slide crop');
     this.dimensions = `${video.videoWidth}:${video.videoHeight}`;
     this.tracker = new CropTracker(crop, mode);

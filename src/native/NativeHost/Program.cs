@@ -14,7 +14,8 @@ internal static partial class Program
     private static int Main(string[] args)
     {
         var test = args.Length == 2 && args[0] == "--test-root";
-        if (!test && (args.Length == 0 || args[0] != File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "allowed-origin.txt")).Trim())) return 2;
+        var desktop = args.Length == 1 && args[0] == "--desktop-capture";
+        if (!test && !desktop && (args.Length == 0 || args[0] != File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "allowed-origin.txt")).Trim())) return 2;
         using var store = new LocalStore(test ? args[1] : LocalStore.DefaultRoot);
         using var input = Console.OpenStandardInput(); using var output = Console.OpenStandardOutput();
         string? active = null; var clock = new Stopwatch();
@@ -48,7 +49,7 @@ internal static partial class Program
                         case "create":
                             if (!request.GetProperty("consent").GetBoolean()) throw new InvalidDataException("Consent required");
                             if (store.FreeBytes() < 3136870912) throw new IOException("Not enough free disk space for recording and export");
-                            active = store.Create(request.GetProperty("mime").GetString()!); clock.Restart();
+                            active = store.Create(request.GetProperty("mime").GetString()!, desktop ? "desktop-window" : "browser-tab"); clock.Restart();
                             if (OperatingSystem.IsWindows()) SetThreadExecutionState(0x80000003);
                             value = new { id = active }; break;
                         case "append":

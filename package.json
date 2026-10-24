@@ -7,6 +7,10 @@
   "license": "UNLICENSED",
   "main": "dist/main/src/shell/main.js",
   "scripts": {
+    "capture:build": "node tools/desktop-capture-build.mjs",
+    "typecheck:capture": "tsc -p tsconfig.desktop-capture.json",
+    "smoke:capture": "npm run capture:build && node tools/run-electron.mjs dist/desktop-capture/main.cjs --smoke",
+    "test:capture": "node --test tests/desktop-capture.test.mjs",
     "vision:spike": "node tools/run-electron.mjs tools/vision-spike.cjs",
     "test:vision": "node --test tests/vision-spike.test.mjs",
     "design:preview": "node docs/design-lab/build.mjs",

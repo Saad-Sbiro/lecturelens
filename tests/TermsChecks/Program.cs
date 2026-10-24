@@ -10,13 +10,15 @@ internal static class Program
 {
     static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
         var root = Path.Combine(Path.GetTempPath(), "lecturelens-terms-ui-" + Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable("LECTURELENS_DATA_ROOT", root);
         try
         {
-            var app = new Application();
+            var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            if (args.Contains("--gallery")) { MotionGallery.Run(app); return; }
+            MotionChecks.Run();
             app.Resources["PanelBackground"] = new SolidColorBrush(Color.FromRgb(32, 35, 43));
             app.Resources["Danger"] = Brushes.Salmon;
             app.Resources["AppForeground"] = Brushes.White;

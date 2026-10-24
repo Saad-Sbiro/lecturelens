@@ -23,6 +23,8 @@ internal sealed class NotesStudio(FrameworkElement view)
  string? Folder=>sessions.SelectedItem is SessionInfo s&&s.State!="recording"&&s.Problems.Length==0?Path.Combine(LectureLens.Storage.LocalStore.DefaultRoot,s.Id):null;
  internal void Attach()
  {
+  Motion.Initialize();
+  WorkspaceMotion.Attach(view);
   Notifications.Attach(view);
   detail.ItemsSource=new[]{new Choice("brief",S("brief")),new Choice("standard",S("standard")),new Choice("detailed",S("detailed"))};detail.DisplayMemberPath="Label";detail.SelectedValuePath="Id";detail.SelectedValue="standard";
   using var registry=JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"languages.json")));
@@ -38,7 +40,12 @@ internal sealed class NotesStudio(FrameworkElement view)
   Button("GeneratePdf").Click+=async(_,_)=>await Generate();
   Button("CancelGeneration").Click+=(_,_)=>running?.Cancel();
   Button("CancelGeneration").IsEnabled=false;
-  sessions.SelectionChanged+=(_,_)=>UpdateSource();UpdateSource();
+  string? animatedLesson=null;
+  sessions.SelectionChanged+=(_,_)=>{
+   UpdateSource();
+   if(sessions.SelectedItem is SessionInfo selected&&selected.Id!=animatedLesson){animatedLesson=selected.Id;Motion.Enter((TextBox)view.FindName("TranscriptPreview"));}
+  };UpdateSource();
+  view.Unloaded+=(_,_)=>((TextBox)view.FindName("TranscriptPreview")).BeginAnimation(UIElement.OpacityProperty,null);
  }
  record Choice(string Id,string Label);
  Button Button(string name)=>(Button)view.FindName(name);

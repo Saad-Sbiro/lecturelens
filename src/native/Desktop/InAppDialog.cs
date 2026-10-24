@@ -22,16 +22,20 @@ internal sealed class InAppDialog
         overlay = new Grid { Name = "DialogOverlay", Background = new SolidColorBrush(Color.FromArgb(170, 0, 0, 0)), Focusable = true };
         var card = new Border { MaxWidth = width, Margin = new Thickness(24), Padding = new Thickness(24), CornerRadius = new CornerRadius(18), VerticalAlignment = VerticalAlignment.Center, Child = content };
         card.SetResourceReference(Border.BackgroundProperty, "PanelBackground");
+        card.Loaded += (_, _) => ControlMotion.AttachTree(card);
         overlay.Children.Add(card);
         Grid.SetRow(overlay, 1); Grid.SetRowSpan(overlay, 2); Grid.SetColumnSpan(overlay, 4); Panel.SetZIndex(overlay, 100);
         KeyboardNavigation.SetTabNavigation(overlay, KeyboardNavigationMode.Cycle);
         overlay.PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss?.Invoke(); e.Handled = true; } };
         shell.Children.Add(overlay); overlay.Focus();
+        SpatialMotion.Reveal(card, true);
     }
     internal void Close()
     {
         if (closed) return;
-        closed = true; shell.Children.Remove(overlay);
+        closed = true;
+        foreach (FrameworkElement child in overlay.Children) SpatialMotion.Reset(child);
+        shell.Children.Remove(overlay);
         foreach (var item in disabled) item.IsEnabled = true;
         if (previousFocus != null) Keyboard.Focus(previousFocus);
     }

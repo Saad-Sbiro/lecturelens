@@ -74,3 +74,15 @@ The automated `npm run test:durability` writes 3,600 synthetic 399,000-byte chun
 - Before acceptance, extension preview is unavailable. If local acceptance cannot be saved, an error remains visible and capture stays unavailable.
 - Slides + voice: cloud auto-crop starts unchecked. Leave it off and select an area manually; there must be no Gemini request. To use automatic crop, explicitly enable the image-upload option before preview. After ending a session, it resets to off. Voice only never uploads images.
 - Do not delete a real user's acceptance to test onboarding. Automated checks use isolated temporary data: `.tools/dotnet/dotnet.exe run --project tests/TermsChecks/TermsChecks.csproj`, `npm run test:native`, and the mocked extension UI check documented in decisions.
+
+## Native motion polish (2026-10-24)
+- Restart the desktop after rebuilding. Confirm the existing layout, colors and fonts are unchanged in both themes.
+- Move over buttons and click rapidly: hover fades briefly, while press and actions respond immediately. Use Tab/Space too; focus remains visible.
+- Switch between saved lessons, open Settings/Terms, and dismiss immediately: entry should soften without delaying interaction. Repeated progress notifications should remain steady.
+- Turn off Windows animation effects and repeat: transitions should be immediate. Capture reliability is covered by offline checks; do not record a real class just to test animation.
+
+## Visible motion pass
+- In the updated desktop, hover/press buttons, select another lesson, open Settings, and open a language dropdown. Expect visible lift/compression, slide/scale entry and immediate input response.
+- Scroll a long transcript and the export panel quickly, then use the scrollbar or keyboard. Motion must stop at the current position before direct interaction; virtualized lesson lists retain normal scrolling.
+- Check processing indicators only while a real job is running. Stop/cancel controls remain stationary and respond immediately.
+- Disable Windows animations while a button is hovered: geometry should reset. Reopen dialogs and repeat scrolling; motion should stay disabled.

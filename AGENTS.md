@@ -3,7 +3,7 @@
 Always-loaded rules. Keep this file under 60 lines. Full spec: `PROJECT_BRIEF.md` (read §0–§2 and §11 once, then only the section a task needs).
 
 ## What this is
-An installable **desktop app** (a mobile app comes later; not a hosted website). It records a class that runs in a browser window (screen + sound), finds important slides, transcribes the speech, and outputs a PDF of simple study notes with slide screenshots. Later sources: desktop meeting apps (Zoom, Teams), then mobile. French is the first language, but nothing may assume French.
+An installable **desktop app** (mobile comes later; not a hosted website). It records browser lessons and selected Windows app windows (Zoom, Teams, Discord; experimental), finds important slides, transcribes speech, and outputs study-note PDFs. Desktop audio includes all system sound with explicit consent. French is the first language, but nothing may assume French.
 
 ## Non-negotiable rules
 1. **Free-first:** v1 runs at $0 with no credit card. Never add a paid-only dependency. Check official docs for free limits before integrating any service.
@@ -38,6 +38,7 @@ Never claim something works unless you ran it. State what was verified, what was
 - replay a fixture: `npm run replay -- fixtures/synthetic-session.json`
 - golden-set eval: `npm run eval` (readiness only until labelled fixtures exist)
 - native preview: `npm run package:native` → `release/native-win-x64/LectureLens.exe`; check: `npm run smoke:native`
+- desktop capture: `npm run test:capture`; `npm run typecheck:capture`; `npm run smoke:capture`; owner checks: `docs/desktop-capture-checklist.md`
 - browser spike: `npm run dev` prepares extension/host; load `dist/extension` once in Chrome. Checks: `npm run test:native`, `npm run test:extension`, `npm run typecheck:extension`.
 - legacy Electron installer: `npm run package`; disk crash spike: `npm run test:durability`
 
