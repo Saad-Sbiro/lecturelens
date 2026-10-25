@@ -21,7 +21,11 @@
     },
     "defaultTeacher": true,
     "defaultOutput": true,
-    "defaultUi": false
+    "defaultUi": false,
+    "offlineNotes": {
+      "notice": "Fiche hors ligne : extraits de la transcription, sans synthèse IA ni traduction. Vérifiez les erreurs de transcription.",
+      "section": "Extraits"
+    }
   },
   "en": {
     "code": "en",
@@ -45,6 +49,40 @@
     },
     "defaultTeacher": false,
     "defaultOutput": false,
-    "defaultUi": true
+    "defaultUi": true,
+    "offlineNotes": {
+      "notice": "Offline study sheet: transcript excerpts, without AI synthesis or translation. Review transcription errors.",
+      "section": "Excerpts"
+    }
+  },
+  "ar": {
+    "code": "ar",
+    "nativeName": "العربية (تجريبي)",
+    "englishName": "Arabic",
+    "script": "Arab",
+    "direction": "rtl",
+    "enabled": true,
+    "speechEnabled": false,
+    "status": "experimental",
+    "speechCode": "ar",
+    "textCode": "ara",
+    "fontStack": "Arial, sans-serif",
+    "promptLocale": "ar",
+    "notesInstructions": "Write clear Modern Standard Arabic, not dialect. Translate explanations, section titles and diagram labels into Arabic. Keep code, mathematical expressions, units and proper names unchanged. At first use, give the Arabic technical term followed by its source-language term in parentheses when useful. Never translate source IDs or JSON keys. Preserve uncertainty rather than guessing a translation.",
+    "providers": [],
+    "pdfLabels": {
+      "review": "مسودة دراسية مولّدة بالذكاء الاصطناعي. دعم العربية تجريبي؛ راجع المصطلحات والمقاطع غير الواضحة مع المصدر.",
+      "images": "لقطة محفوظة من الدرس. لا يحلّل النموذج الصور في هذا الإصدار.",
+      "sources": "النص المصدر",
+      "unmatched": "تعذّر ربط شرح شفهي بهذه اللقطة. راجع النص المصدر؛ لم تُضَف معلومات من خارج الدرس.",
+      "aligned": "شرح مستخرج من الكلام في هذا الجزء من الدرس. الربط الزمني تقريبي؛ لم تُحلَّل الصورة."
+    },
+    "defaultTeacher": false,
+    "defaultOutput": false,
+    "defaultUi": false,
+    "offlineNotes": {
+      "notice": "مقتطفات من النص الأصلي دون تلخيص آلي أو ترجمة. راجع أخطاء التفريغ.",
+      "section": "مقتطفات"
+    }
   }
 }

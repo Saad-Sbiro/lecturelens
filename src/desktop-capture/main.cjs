@@ -3,15 +3,17 @@ const { join, resolve } = require('node:path');
 const { StorageHost } = require('./host.cjs');
 
 app.setName('LectureLens Desktop Capture');
-let window, host, selected, granted, recording = false, allowClose = false;
+let window, host, selected, granted, recording = false, allowClose = false, closeAfterSave = false;
 const captureTitle = 'LectureLens · Desktop capture';
 const smoke = process.argv.includes('--smoke');
 const embedded = process.argv.includes('--embedded');
+const theme = process.argv.includes('--theme=light') ? 'light' : 'dark';
+const font = process.argv.find(value => value.startsWith('--font='))?.slice(7) || 'Segoe UI';
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (window) { window.restore(); window.focus(); } });
   app.whenReady().then(async () => {
-    window = new BrowserWindow({ width: 1000, height: 760, minWidth: 750, minHeight: 520, title: captureTitle, backgroundColor: '#15171b',
+    window = new BrowserWindow({ width: 1000, height: 760, minWidth: 750, minHeight: 520, title: captureTitle, backgroundColor: theme === 'light' ? '#F5F2EB' : '#191B21',
       ...(embedded ? { x: -32000, y: -32000, frame: false, skipTaskbar: true } : {}),
       webPreferences: { preload: join(__dirname, 'preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
     const trusted = event => event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame;
@@ -33,6 +35,7 @@ else {
     window.webContents.on('will-navigate', event => event.preventDefault());
     ipcMain.handle('capture', async (event, op, data = {}) => {
       if (!trusted(event)) throw new Error('Untrusted capture request');
+      if (op === 'close') { window.close(); return; }
       if (op === 'list') return (await sources()).filter(item => item.name !== captureTitle).map(({ id, name }) => ({ id, name }));
       if (op === 'select') {
         if (recording || granted || data.consent !== true) throw new Error('Stop the preview first and confirm recording consent');
@@ -52,18 +55,23 @@ else {
       host ??= new StorageHost(process.env.LECTURELENS_CAPTURE_HOST || resolve(__dirname, '../native-host/LectureLens.NativeHost.exe'));
       const result = await host.call(op, data);
       if (op === 'create') recording = true;
-      if (op === 'finish') recording = false;
+      if (op === 'finish') {
+        recording = false;
+        // Return to the lesson only after storage acknowledges the completed recording.
+        if (closeAfterSave) setImmediate(() => { if (!window.isDestroyed()) window.close(); });
+      }
       return result;
     });
     window.on('close', event => {
       if (!recording || allowClose) return;
       event.preventDefault();
+      if (closeAfterSave) return;
       const answer = dialog.showMessageBoxSync(window, { type: 'question', buttons: ['Keep recording', 'Stop and save'], defaultId: 0, cancelId: 0, message: 'Stop recording before closing?' });
-      if (answer === 1) window.webContents.send('stop-capture');
+      if (answer === 1) { closeAfterSave = true; window.webContents.send('stop-capture'); }
     });
     window.webContents.on('render-process-gone', () => { host?.close(); recording = false; });
     window.on('closed', () => { host?.close(); app.quit(); });
-    await window.loadFile(join(__dirname, 'index.html'), embedded ? { query: { embedded: '1' } } : {});
+    await window.loadFile(join(__dirname, 'index.html'), { query: { ...(embedded ? { embedded: '1' } : {}), theme, font } });
     if (smoke) {
       // The renderer enumerates windows on load; let that desktopCapturer request
       // finish before asking Viz for the smoke screenshot.

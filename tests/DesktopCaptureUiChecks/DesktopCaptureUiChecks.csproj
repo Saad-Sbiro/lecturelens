@@ -3,7 +3,6 @@
   <ItemGroup>
     <Using Remove="System.Drawing"/><Using Remove="System.Windows.Forms"/>
     <Compile Include="../../src/native/Desktop/DesktopCapture.cs" Link="DesktopCapture.cs"/>
-    <Compile Include="../../src/native/Desktop/InAppDialog.cs" Link="InAppDialog.cs"/>
     <Compile Include="../../src/native/Desktop/ControlMotion.cs" Link="ControlMotion.cs"/>
     <Compile Include="../../src/native/Desktop/Motion.cs" Link="Motion.cs"/>
     <Compile Include="../../src/native/Desktop/SpatialMotion.cs" Link="SpatialMotion.cs"/>

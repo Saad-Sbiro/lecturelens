@@ -30,7 +30,7 @@ internal static class ControlMotion
             case DataGrid grid:
                 grid.LoadingRow += (_, e) => Attach(e.Row);
                 break;
-            case Button button when button.Name is not ("CloseWindow" or "MaximizeWindow" or "MinimizeWindow" or "Stop" or "CancelGeneration"):
+            case Button button when button.Name is not ("CloseWindow" or "MaximizeWindow" or "MinimizeWindow" or "Stop" or "CancelGeneration" or "CompanionButton"):
                 button.PreviewMouseLeftButtonDown += (_, _) => { if (button.IsEnabled && Motion.Enabled) SpatialMotion.To(button, .96, duration: 80); };
                 button.PreviewMouseLeftButtonUp += (_, _) => SpatialMotion.To(button);
                 button.PreviewKeyDown += (_, e) => { if (e.Key == Key.Space && Motion.Enabled) SpatialMotion.To(button, .96, duration: 80); };

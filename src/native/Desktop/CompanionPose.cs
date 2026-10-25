@@ -21,9 +21,8 @@ internal sealed class CompanionPose
     internal int Variation { get; private set; }
     static readonly CompanionMove[] playful = [CompanionMove.Wave, CompanionMove.Hop, CompanionMove.Peek, CompanionMove.Wiggle, CompanionMove.HighFive, CompanionMove.Wink, CompanionMove.Stretch, CompanionMove.Spark];
     static readonly CompanionMove[] gentle = [CompanionMove.Nod, CompanionMove.Perk, CompanionMove.Tilt];
-    double targetX, targetY, idle, reactionTime, duration = 1, lastNotice = -10;
+    double targetX, targetY, idle, reactionTime, duration = 1;
     int playfulIndex, gentleIndex, serial;
-    CompanionGesture interrupted;
 
     // Normalize each side independently: the distant left side of the workspace must
     // keep changing the gaze, instead of saturating a few pixels outside the card.
@@ -44,24 +43,16 @@ internal sealed class CompanionPose
     internal void React(bool personal = false, bool quiet = false)
     {
         idle = 0;
+        // Ignore extra reactions until this move finishes; never queue cosmetic work.
+        if (Move != CompanionMove.None) return;
         var moves = quiet ? gentle : playful;
         var index = quiet ? gentleIndex++ : playfulIndex++;
-        interrupted = Gesture;
         Move = moves[index % moves.Length];
         Variation = (serial + serial / playful.Length) % 2 == 0 ? 1 : -1;
         serial++;
         Personal = personal;
         reactionTime = 0;
         duration = quiet ? 1.1 : Move is CompanionMove.Wave or CompanionMove.Stretch ? 1.85 : 1.5;
-    }
-
-    internal void NoticeTyping()
-    {
-        idle = 0;
-        // Let a gesture finish while typing continuously, and preserve deliberate clicks.
-        if (Time - lastNotice < 1.8 || Move != CompanionMove.None) return;
-        lastNotice = Time;
-        React(quiet: true);
     }
 
     internal void Step(double seconds, bool animate)
@@ -72,8 +63,7 @@ internal sealed class CompanionPose
         {
             LookX = LookY = HeadX = HeadY = BodyX = BodyY = Rest = Time = 0;
             Move = CompanionMove.None;
-            Gesture = interrupted = default;
-            lastNotice = -10;
+            Gesture = default;
             return;
         }
         Time += dt;
@@ -90,7 +80,7 @@ internal sealed class CompanionPose
         {
             reactionTime += dt;
             var next = CompanionGesture.Sample(Move, Progress, Variation);
-            Gesture = CompanionGesture.Blend(interrupted, next, Math.Clamp(reactionTime / .16, 0, 1));
+            Gesture = CompanionGesture.Blend(default, next, Math.Clamp(reactionTime / .16, 0, 1));
             if (Progress >= 1) { Move = CompanionMove.None; Gesture = default; }
         }
     }

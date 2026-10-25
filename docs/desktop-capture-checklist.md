@@ -4,6 +4,7 @@ Status: live capture NOT RUN. The adapter is experimental. Automated tests use s
 
 Run `npm run dev`, then **Record a desktop app**. For distribution use `npm run package:native` and keep the whole output folder together. The capture helper runs independently of WPF UI reloads. Browser lessons should continue using the Chrome extension for tab/audio isolation.
 
+0. Open **Record a desktop app**: it should replace the workspace like **Review slides**, retain the title bar, match the current light/dark theme and font, and offer **Back to lesson**. Return while idle with Back and Escape (also while focus is inside the embedded page); the lesson selection must be preserved. Repeat at minimum window size and confirm controls remain scrollable. During a permitted recording, Back/Escape must offer the existing keep-recording or stop-and-save choice.
 1. Open permitted sample content in Zoom, Microsoft Teams or Discord. Select the window containing the shared slides, not a separate chat or meeting-controls window.
 2. Read the consent notice. This adapter records ALL sound from the Windows output device, including notifications and unrelated apps. Silence other apps. Your microphone is not captured. No cloud image analysis is used.
 3. Preview: verify the picture updates and the sound meter reacts to the speaker. Start must stay disabled without recent sound. Drag a slide rectangle, or explicitly leave the full window selected. Audio-only mode skips slides.
@@ -20,3 +21,5 @@ Run `npm run dev`, then **Record a desktop app**. For distribution use `npm run 
 | Discord | Pending | Pending | Pending | Pending | Pending | Pending |
 
 Record Windows build, audio output device, app version and any error. No per-app audio isolation, microphone mixing, DRM bypass or reliable minimized-source capture is claimed. Speaker changes are normal; source changes require a fresh preview. The helper does not auto-transcribe or upload media; use the existing notes flow after saving.
+
+Automated navigation check: `npm run test:capture-ui` attaches the real helper without requesting capture, checks full-page placement, Back, exact workspace visibility restoration and reopen/Escape. `npm run test:capture` mocks media/storage and covers the guarded renderer close request and theme/font inheritance.

@@ -5,6 +5,7 @@
     <ApplicationIcon>../../assets/logomark.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="DesktopChecks" />
     <Using Remove="System.Drawing" />
     <Using Remove="System.Windows.Forms" />
     <ProjectReference Include="../Storage/Storage.csproj" />

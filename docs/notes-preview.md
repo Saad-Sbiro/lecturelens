@@ -16,3 +16,12 @@ Add Chrome extension opens the extensions page and copies dist/extension to the 
 Offline notes checks:
 .tools/dotnet/dotnet.exe run --project tests/NotesChecks/NotesChecks.csproj
 Add -- --render for an actual synthetic local PDF rendering probe (no network or live capture).
+
+Lesson-only PDF acceptance (2026-10-25):
+- Restart the desktop app using `npm run dev`, select an existing lesson and generate a new PDF. Existing exports are unchanged.
+- Check connected explanatory paragraphs and compare the first and final substantive concepts against the source. Audience questions, microphone checks, logistics and unrelated remarks should be absent. A useful teacher answer should appear as a lesson explanation.
+- Inspect `notes.json` beside the PDF for one keep/mixed/exclude decision per source and source references for each section/diagram. Check mixed segments manually: structural validation cannot prove their selected clauses are correct.
+- Expect diagrams only for relationships actually stated in the lesson. Confirm their labels, ordering and comparisons; check captured images next to their matching explanations. Generated diagrams remain available with captured screenshots disabled.
+- Synthetic offline checks: `.tools/dotnet/dotnet.exe run --project tests/NotesChecks/NotesChecks.csproj`. Add `-- --render` for French and temporary Arabic-registry layout fixtures in `artifacts/pdf-preview`. This does not enable Arabic in the product or test a live model.
+
+Arabic PDF output (experimental): restart with `npm run dev`, keep Teacher language set to the actual spoken language, then select العربية (تجريبي) under PDF language and generate. Review technical terminology, omissions and diagram labels against the original lesson. The current NVIDIA model does not document Arabic among its post-training focus languages; quality is not yet measured on real lessons. The Arabic rendering fixture now uses the real registry entry, not a temporary test locale. Arabic speech recognition is not enabled by this change.

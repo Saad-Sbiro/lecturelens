@@ -1,6 +1,6 @@
 namespace LectureLens.Desktop;
 
-// All gestures start and finish at rest. Pose blending preserves continuity on interruption.
+// All gestures start and finish at rest. Blending eases the initial entrance.
 internal readonly record struct CompanionGesture(double X = 0, double Y = 0, double Roll = 0,
     double Stretch = 0, double HeadRoll = 0, double HeadY = 0, double EarLeft = 0,
     double EarRight = 0, double PawLeft = 0, double PawRight = 0, double Smile = 0,

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace LectureLens.Desktop;
 
@@ -14,6 +15,7 @@ internal sealed class CompanionDrawing : FrameworkElement
     static readonly Brush ear = Gradient("#E8CCA6", "#CBA57C");
     static readonly Brush scarf = Gradient("#7FA9A6", "#365F69");
     static readonly Brush eye = Gradient("#543E38", "#261F26");
+    static readonly BitmapFrame logo = BitmapFrame.Create(new Uri($"pack://application:,,,/{typeof(CompanionDrawing).Assembly.GetName().Name};component/assets/logomark.png"));
 
     static Brush Gradient(string from, string to)
     {
@@ -69,10 +71,10 @@ internal sealed class CompanionDrawing : FrameworkElement
         Path(d, "M142,150 C188,154 194,119 179,105 C184,129 160,115 150,123 C142,129 139,140 142,150Z", fur);
         Path(d, "M179,105 C184,127 163,117 158,121 C172,132 190,126 179,105Z", face);
         d.Pop();
-        Oval(d, 101, 153, 13, 7, fur);
-        Oval(d, 139, 153, 13, 7, fur);
+        // One continuous silhouette joins thighs and paws without detached foot ovals.
+        Path(d, "M90,113 C88,125 84,137 91,145 C85,149 85,155 92,158 Q102,161 111,157 L114,153 Q120,155 126,153 L129,157 Q140,161 149,157 C155,152 152,147 146,145 C154,136 151,123 146,112Z", fur);
         Line(d, "M96,154 L96,156 M101,154 L101,156 M139,154 L139,156 M144,154 L144,156", "#C5A58C", 1);
-        Path(d, "M90,113 C88,130 83,146 99,151 C109,155 133,155 144,149 C155,141 150,125 146,112Z", fur);
+        Line(d, "M92,150 Q99,147 106,150 M134,150 Q141,147 148,150", "#D8BA99", 1);
         Oval(d, 120, 136, 19, 15, face);
 
         Path(d, "M95,109 C105,118 139,118 147,109 L146,119 C134,129 106,128 94,118Z", scarf);
@@ -88,9 +90,9 @@ internal sealed class CompanionDrawing : FrameworkElement
         DrawEar(d, true, 7 - Pose.HeadX * 8 + gesture.EarRight - breathe * 2);
         Path(d, "M75,79 C72,58 92,49 111,52 Q120,46 129,52 C150,48 166,61 165,79 L175,91 L167,94 L171,101 C159,122 84,122 71,101 L75,95 L66,92Z", fur);
         Path(d, "M81,83 C84,70 102,72 120,83 C138,72 156,70 160,83 C170,113 143,115 120,114 C96,115 72,110 81,83Z", face);
-        // Tiny forehead tuft and a warm star are Lumi's identifying marks.
+        // The existing app mark follows the same head transform as the face.
         Line(d, "M113,58 Q116,61 120,58 Q122,62 126,58", "#D8B897", 1.2);
-        Star(d, 120, 68, 5.5, "#DFA653", 1);
+        d.DrawImage(logo, new Rect(107, 55, 26, 26));
         Oval(d, 88, 99, 7, 3, Ink("#38D9AE7E"));
         Oval(d, 152, 99, 7, 3, Ink("#38D9AE7E"));
         var blinkPhase = t % 4.7;

@@ -30,8 +30,9 @@ internal sealed class NotesStudio(FrameworkElement view)
   using var registry=JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"languages.json")));
   var choices=registry.RootElement.EnumerateObject().Where(x=>x.Value.GetProperty("enabled").GetBoolean()).Select(x=>new Choice(x.Name,x.Value.GetProperty("nativeName").GetString()!)).ToArray();
   language.ItemsSource=choices;language.DisplayMemberPath="Label";language.SelectedValuePath="Id";language.SelectedValue=registry.RootElement.EnumerateObject().First(x=>x.Value.GetProperty("defaultOutput").GetBoolean()).Name;
-  teacher.ItemsSource=choices;teacher.DisplayMemberPath="Label";teacher.SelectedValuePath="Id";teacher.SelectedValue=registry.RootElement.EnumerateObject().First(x=>x.Value.GetProperty("defaultTeacher").GetBoolean()).Name;
-  if(File.Exists(PrefPath))try{var p=JsonSerializer.Deserialize<Preferences>(File.ReadAllText(PrefPath))!;if(new[]{"brief","standard","detailed"}.Contains(p.Detail))detail.SelectedValue=p.Detail;if(choices.Any(c=>c.Id==p.Language))language.SelectedValue=p.Language;model=p.ModelPreferenceVersion==0&&p.Model=="nvidia/nemotron-3.5-lightning-30b-a3b"?NvidiaNotes.DefaultModel:p.Model;if(choices.Any(c=>c.Id==p.TeacherLanguage))teacher.SelectedValue=p.TeacherLanguage;}catch(JsonException){}
+  var teacherChoices=choices.Where(c=>!registry.RootElement.GetProperty(c.Id).TryGetProperty("speechEnabled",out var enabled)||enabled.GetBoolean()).ToArray();
+  teacher.ItemsSource=teacherChoices;teacher.DisplayMemberPath="Label";teacher.SelectedValuePath="Id";teacher.SelectedValue=registry.RootElement.EnumerateObject().First(x=>x.Value.GetProperty("defaultTeacher").GetBoolean()).Name;
+  if(File.Exists(PrefPath))try{var p=JsonSerializer.Deserialize<Preferences>(File.ReadAllText(PrefPath))!;if(new[]{"brief","standard","detailed"}.Contains(p.Detail))detail.SelectedValue=p.Detail;if(choices.Any(c=>c.Id==p.Language))language.SelectedValue=p.Language;model=p.ModelPreferenceVersion==0&&p.Model=="nvidia/nemotron-3.5-lightning-30b-a3b"?NvidiaNotes.DefaultModel:p.Model;if(teacherChoices.Any(c=>c.Id==p.TeacherLanguage))teacher.SelectedValue=p.TeacherLanguage;}catch(JsonException){}
   Button("SavePreferences").Click+=(_,_)=>{Save();status.Text=S("preferencesSaved");};
   Button("KeySetup").Click+=(_,_)=>Settings();
   Button("Transcribe").Click+=async(_,_)=>await TranscribeLesson();
@@ -151,7 +152,7 @@ internal sealed class NotesStudio(FrameworkElement view)
     status.Text=S("progressPart")+" "+(i+1)+" / "+parts.Count;
     outputs.Add(await generator.Generate(parts[i],options,running.Token));
    }
-   var notes=new StudyNotes(options.Topic??outputs[0].Title,outputs.Count==1?outputs[0].Overview:"",outputs.SelectMany(n=>n.Sections).ToArray());
+   var notes=new StudyNotes(options.Topic??outputs[0].Title,outputs.Count==1?outputs[0].Overview:"",outputs.SelectMany(n=>n.Sections).ToArray(),outputs.SelectMany(n=>n.Decisions??[]).ToArray());
    var destination=Path.GetFullPath(Path.Combine(LectureLens.Storage.LocalStore.DefaultRoot,"..","exports",Path.GetFileName(folder),DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")+"-"+Guid.NewGuid().ToString("N")[..6]));
    Directory.CreateDirectory(destination);
    await File.WriteAllTextAsync(Path.Combine(destination,"sources.json"),JsonSerializer.Serialize(sources,NvidiaNotes.Json));

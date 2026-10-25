@@ -22,13 +22,21 @@ internal sealed class BrowserPdf : IDocumentRenderer
   var locale=registry.RootElement.GetProperty(language);
   var direction=locale.GetProperty("direction").GetString()=="rtl"?"rtl":"ltr";
   var html=new StringBuilder("<!doctype html><html lang='"+H(language)+"' dir='"+direction+"'><meta charset='utf-8'><meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; img-src data:; style-src 'unsafe-inline'\"><title>LectureLens</title><style>@page{size:A4;margin:19mm 17mm 20mm;@bottom-left{content:'LectureLens';font:9pt Arial;color:#80745e}@bottom-right{content:counter(page);font:9pt Arial;color:#80745e}}*{box-sizing:border-box}body{font:11pt/1.65 'Segoe UI',Arial,sans-serif;color:#28231b;margin:0;overflow-wrap:anywhere}h1{font-size:28pt;line-height:1.13;letter-spacing:-1.2px;margin:8mm 0 5mm}h2{font-size:19pt;line-height:1.3;break-after:avoid;color:#33250c}p,li{orphans:3;widows:3}li{margin:0 0 7pt;padding-left:4pt}section{margin-bottom:10mm}.cover{border-top:7px solid #ffb51b;padding:5mm 0}.brand{font-size:13pt;font-weight:700;letter-spacing:2px}.overview{font-size:12pt;color:#625842;white-space:pre-wrap}.slide{break-inside:avoid;margin:0 0 6mm}.lesson-slide{break-before:page}.cover+.lesson-slide{break-before:auto}.lesson-slide h2{margin-top:0}.slide img{max-width:100%;max-height:110mm;object-fit:contain}.warning{font-size:9pt;color:#786b54}</style><body>");
+  html.Append("<style>"+LessonDiagramHtml.Styles+"</style>");
   html.Append("<header class='cover'><div class='brand'>LECTURE<span style='color:#d98500'>LENS</span></div><h1>"+H(notes.Title)+"</h1>");
   if(!string.IsNullOrWhiteSpace(notes.Overview))html.Append("<p class='overview'>"+H(notes.Overview)+"</p>");
   html.Append("<p class='warning'>"+H(Label(language,"review"))+"</p></header>");
   if(sections)foreach(var section in notes.Sections)html.Append(SectionHtml(section));
   return html.ToString();
  }
- static string SectionHtml(NoteSection section)=>"<section><h2>"+H(section.Title)+"</h2><ul>"+string.Concat(section.Bullets.Select(b=>"<li>"+H(b)+"</li>"))+"</ul></section>";
+ static string SectionHtml(NoteSection section)
+ {
+  var html=new StringBuilder("<section class='lesson-section'><h2>"+H(section.Title)+"</h2>");
+  foreach(var paragraph in section.Paragraphs??[])html.Append("<p class='explanation'>"+H(paragraph)+"</p>");
+  foreach(var diagram in section.Diagrams??[])html.Append(LessonDiagramHtml.Render(diagram));
+  if(section.Bullets.Length>0)html.Append("<ul>"+string.Concat(section.Bullets.Select(b=>"<li>"+H(b)+"</li>"))+"</ul>");
+  return html.Append("</section>").ToString();
+ }
  static string SlideHtml(string label,string image)=>"<figure class='slide'><img alt='"+H(label)+"' src='data:image/jpeg;base64,"+H(image)+"'></figure>";
  internal static int? SectionSlide(NoteSection section,IReadOnlyList<NoteSource> sources)
  {

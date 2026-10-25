@@ -10,6 +10,10 @@ using LectureLens.Desktop;
 internal static class CompanionChecks
 {
     static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
+    static void Finish(CompanionPose pose)
+    {
+        for (var i = 0; i < 60 && pose.Move != CompanionMove.None; i++) pose.Step(.05, true);
+    }
     static void Advance()
     {
         var frame = new DispatcherFrame();
@@ -31,11 +35,11 @@ internal static class CompanionChecks
         var silhouettes = new HashSet<CompanionGesture>();
         for (var i = 0; i < 8; i++)
         {
-            pose.React(personal: true); moves.Add(pose.Move);
+            Finish(pose); pose.React(personal: true); moves.Add(pose.Move);
             silhouettes.Add(CompanionGesture.Sample(pose.Move, .38, 1));
         }
-        Check(moves.Count == 8 && silhouettes.Count == 8, "Eight consecutive clicks must select eight distinct choreographies.");
-        for (var i = 0; i < 3; i++) { pose.React(quiet: true); moves.Add(pose.Move); }
+        Check(moves.Count == 8 && silhouettes.Count == 8, "Eight clicks after completed moves must select eight distinct choreographies.");
+        for (var i = 0; i < 3; i++) { Finish(pose); pose.React(quiet: true); moves.Add(pose.Move); }
         Check(moves.Count == 11, "Quiet controls must have three distinct appropriate reactions.");
         foreach (var move in moves)
         {
@@ -43,16 +47,18 @@ internal static class CompanionChecks
             var ending = CompanionGesture.Sample(move, 1, 1);
             Check(Math.Abs(ending.Y) < .001 && Math.Abs(ending.PawLeft) < .001 && Math.Abs(ending.HeadRoll) < .001, "Every move must settle at rest.");
         }
+        Finish(pose);
         pose.React(); for (var i = 0; i < 20; i++) pose.Step(.033, true);
-        var before = pose.Gesture; pose.React();
-        Check(pose.Gesture == before, "Interrupting a gesture must preserve its current pose.");
-        pose.Step(.001, true);
-        Check(Math.Abs(pose.Gesture.PawRight - before.PawRight) < .1, "Interruption must blend without a visible paw jump.");
-        var chosen = pose.Move; pose.NoticeTyping();
-        Check(pose.Move == chosen, "Typing must not interrupt a deliberate click reaction.");
-        for (var i = 0; i < 200; i++) pose.React(personal: true);
-        for (var i = 0; i < 70; i++) pose.Step(.033, true);
-        Check(pose.Move == CompanionMove.None && pose.Gesture == default, "Repeated clicks must settle without queued reactions.");
+        var before = pose.Gesture; var chosen = pose.Move; var progress = pose.Progress;
+        var personal = pose.Personal; var variation = pose.Variation;
+        for (var i = 0; i < 200; i++) pose.React(personal: true, quiet: i % 2 == 0);
+        Check(pose.Gesture == before && pose.Move == chosen && pose.Progress == progress && pose.Personal == personal && pose.Variation == variation,
+            "Additional reactions during a move must neither replace nor restart it.");
+        Finish(pose);
+        Check(pose.Move == CompanionMove.None && pose.Gesture == default, "Ignored clicks must not queue a later reaction.");
+        pose.React();
+        Check(pose.Move == CompanionMove.Hop, "The first fresh click after completion must start the next move without skipping variants.");
+        Finish(pose);
         for (var i = 0; i < 900; i++) pose.Step(.033, true);
         Check(pose.Rest > .99, "An idle companion should doze.");
         pose.Look(1, 0);
@@ -70,7 +76,8 @@ internal static class CompanionChecks
         lessons.Items.Add("fixture-a"); lessons.Items.Add("fixture-b");
         root.Children.Add(button); root.Children.Add(action); root.Children.Add(lessons);
         root.RegisterName("CompanionButton", button); root.RegisterName("CompanionArt", art);
-        var companion = StudyCompanion.Attach(root)!;
+        double chance = 0;
+        var companion = StudyCompanion.Attach(root, () => chance)!;
         Check(ReferenceEquals(companion, StudyCompanion.Attach(root)), "Attaching twice must not duplicate event subscriptions.");
         var host = new Window { Content = root, Width = 280, Height = 320, Left = -10000, Top = -10000, ShowActivated = false, ShowInTaskbar = false };
         host.Show(); Advance();
@@ -86,17 +93,32 @@ internal static class CompanionChecks
             Check(companion.Pose.Personal && companion.Pose.Move != CompanionMove.None, "Companion activation must produce a personal greeting (mouse or keyboard Click).");
             var previous = companion.Pose.Move;
             action.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, action));
+            Check(companion.Pose.Move == previous && companion.Pose.Personal, "A real routed click must not interrupt the active greeting.");
+            Finish(companion.Pose);
+            action.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, action));
             Check(companion.Pose.Move != previous && !companion.Pose.Personal, "Workspace action must produce a different response.");
+            Finish(companion.Pose);
             lessons.SelectedIndex = 1;
-            Check(companion.Pose.Move is CompanionMove.Nod or CompanionMove.Perk or CompanionMove.Tilt, "Selecting a lesson must produce a gentle response.");
-            previous = companion.Pose.Move;
             lessons.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Mouse.PreviewMouseDownEvent });
-            Check(companion.Pose.Move != previous, "Clicking an already-selected lesson must still vary the response.");
-            previous = companion.Pose.Move;
-            lessons.SelectedIndex = 0;
-            Check(companion.Pose.Move == previous, "A selection caused by the same click must not trigger a second gesture.");
             root.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Mouse.PreviewMouseDownEvent });
-            Check(companion.Pose.Move != previous, "A workspace background click must also produce a response.");
+            root.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(host), 0, Key.A) { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+            Check(companion.Pose.Move == CompanionMove.None, "Selections, background clicks and typing must not trigger moves.");
+            var accepted = 0;
+            for (var i = 0; i < 10; i++)
+            {
+                chance = i / 10.0;
+                var click = new RoutedEventArgs(Button.ClickEvent, action);
+                action.RaiseEvent(click);
+                if (companion.Pose.Move != CompanionMove.None) accepted++;
+                Check(!click.Handled, "Companion reactions must not consume button actions.");
+                Finish(companion.Pose);
+            }
+            Check(accepted == 7, "The 70% threshold must accept seven of ten evenly spaced probability samples.");
+            chance = 0;
+            ControlMotion.AttachTree(root);
+            button.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent });
+            Advance();
+            Check(button.RenderTransform.Value.IsIdentity, "Lumi's card must not compress or move on press.");
             host.Content = null; Advance();
             companion.Pose.Step(0, false);
             action.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, action));
@@ -110,7 +132,7 @@ internal static class CompanionChecks
         finally { host.Close(); }
         CheckArtworkBounds();
         RenderGallery();
-        Console.WriteLine("PASS: 11 gestures, full-workspace tracking, layered following, smooth interruption, click deduplication, artwork bounds, rest/wake, reduced motion, timer lifecycle and two-theme gallery.");
+        Console.WriteLine("PASS: 11 gestures, full-workspace tracking, layered following, finish-before-next reaction, 70% button-only reactions, static card press, artwork bounds, rest/wake, reduced motion, timer lifecycle and two-theme gallery.");
     }
 
     static void CheckArtworkBounds()
@@ -121,8 +143,8 @@ internal static class CompanionChecks
             var drawing = new CompanionDrawing { Width = 240, Height = 176 };
             drawing.Measure(new Size(240, 176)); drawing.Arrange(new Rect(0, 0, 240, 176));
             drawing.Pose.Look(direction.X, direction.Y);
-            if (move < 8) for (var n = 0; n <= move; n++) drawing.Pose.React(true);
-            else for (var n = 8; n <= move; n++) drawing.Pose.React(quiet: true);
+            if (move < 8) for (var n = 0; n <= move; n++) { Finish(drawing.Pose); drawing.Pose.React(true); }
+            else for (var n = 8; n <= move; n++) { Finish(drawing.Pose); drawing.Pose.React(quiet: true); }
             for (var frame = 0; frame < 60; frame++)
             {
                 drawing.Pose.Step(.033, true);
@@ -144,8 +166,8 @@ internal static class CompanionChecks
         {
             var drawing = new CompanionDrawing { Height = 190 };
             var state = i % 12;
-            if (state < 8) for (var n = 0; n <= state; n++) drawing.Pose.React(personal: true);
-            else if (state < 11) for (var n = 8; n <= state; n++) drawing.Pose.React(quiet: true);
+            if (state < 8) for (var n = 0; n <= state; n++) { Finish(drawing.Pose); drawing.Pose.React(personal: true); }
+            else if (state < 11) for (var n = 8; n <= state; n++) { Finish(drawing.Pose); drawing.Pose.React(quiet: true); }
             if (state == 11) { drawing.Pose.Look(-.85, .65); for (var n = 0; n < 50; n++) drawing.Pose.Step(.033, true); }
             else for (var n = 0; n < (state is 0 or 6 ? 21 : state >= 8 ? 13 : 17); n++) drawing.Pose.Step(.033, true);
             var panel = new StackPanel(); panel.Children.Add(drawing);
@@ -171,7 +193,7 @@ internal static class CompanionChecks
         {
             if (i == 10) drawing.Pose.Look(-1, .5);
             if (i == 30) drawing.Pose.Look(1, -.4);
-            if (i >= 50 && (i - 50) % 45 == 0) { drawing.Pose.Look(0, 0); drawing.Pose.React(true); }
+            if (i >= 50 && (i - 50) % 50 == 0) { drawing.Pose.Look(0, 0); drawing.Pose.React(true); }
             drawing.Pose.Step(.04, true); drawing.InvalidateVisual(); card.UpdateLayout();
             var bitmap = new RenderTargetBitmap(520, 392, 192, 192, PixelFormats.Pbgra32); bitmap.Render(card);
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));

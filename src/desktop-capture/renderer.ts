@@ -9,7 +9,17 @@ declare global {
   interface Window { captureBridge: { call<T = any>(op: string, data?: Record<string, unknown>): Promise<T>; onStop(callback: () => void): void } }
 }
 const bridge = window.captureBridge;
-if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('embedded')) document.body.classList.add('embedded');
+if (typeof location !== 'undefined') {
+  const appearance = new URLSearchParams(location.search);
+  document.documentElement.dataset.theme = appearance.get('theme') === 'light' ? 'light' : 'dark';
+  document.documentElement.style.fontFamily = appearance.get('font') || 'Segoe UI';
+  if (appearance.has('embedded')) {
+    document.body.classList.add('embedded');
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); void bridge.call('close'); }
+    });
+  }
+}
 const button = (id: string) => document.getElementById(id) as HTMLButtonElement;
 const input = (id: string) => document.getElementById(id) as HTMLInputElement;
 const text = (id: string, value: string) => { document.getElementById(id)!.textContent = value; };

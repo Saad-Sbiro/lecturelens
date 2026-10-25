@@ -19,6 +19,7 @@ internal sealed class SessionPanel(FrameworkElement view)
     private string? selectionId;
     public void Attach()
     {
+        ((Button)view.FindName("RenameLesson")).Click += (_, _) => Rename();
         ((Button)view.FindName("DesktopCapture")).Click += async (_, _) => await Run(() => { DesktopCapture.Show(view); return Task.CompletedTask; });
         ((Button)view.FindName("MergeRecordings")).Click += async (_, _) => await Run(async () => {
             if (NotesStudio.IsGenerating) return;
@@ -111,7 +112,8 @@ internal sealed class SessionPanel(FrameworkElement view)
     }
     private void Rename()
     {
-        if (NotesStudio.IsGenerating || sessions.SelectedItem is not SessionInfo lesson) return;
+        if (NotesStudio.IsGenerating) return;
+        if (sessions.SelectedItem is not SessionInfo lesson) { message.Text = (string)view.FindResource("chooseSession"); return; }
         var dialog = new Window { Owner=Window.GetWindow(view), Title=(string)view.FindResource("renameTitle"), Width=430, Height=215,
             WindowStartupLocation=WindowStartupLocation.CenterOwner, ResizeMode=ResizeMode.NoResize };
         var panel = new StackPanel { Margin=new Thickness(22) };
@@ -120,7 +122,7 @@ internal sealed class SessionPanel(FrameworkElement view)
         var save = new Button { Content=(string)view.FindResource("save"), Padding=new Thickness(18,8,18,8), Margin=new Thickness(0,15,0,0), IsDefault=true };
         panel.Children.Add(save); dialog.Content=panel;
         save.Click += async (_, _) => {
-            try { store.Rename(lesson.Id,input.Text); dialog.Close(); await Run(Refresh); }
+            try { store.Rename(lesson.Id,input.Text); dialog.Close(); await Run(Refresh); message.Text = (string)view.FindResource("lessonRenamed"); }
             catch(Exception e) { message.Text=e.Message; }
         };
         dialog.Loaded += (_, _) => { input.Focus(); input.SelectAll(); };

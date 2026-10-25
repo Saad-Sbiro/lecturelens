@@ -12,22 +12,26 @@ const code = (Array.isArray(built) ? built[0] : built).output.find(item => item.
 const settle = () => new Promise(resolve => setTimeout(resolve, 15));
 
 test('desktop permission boundary: trusted main frame, explicit selection, one-use grant, no monitor fallback', async () => {
-  let handler, grant, window, windows = [{ id: 'window:42', name: 'Lesson' }];
+  let handler, grant, window, windows = [{ id: 'window:42', name: 'Lesson' }], prevented = 0, stopPrompts = 0, decision = 0, closeRequests = 0;
+  const events = {};
   const session = { setPermissionRequestHandler() {}, setPermissionCheckHandler() {}, setDisplayMediaRequestHandler(fn) { grant = fn; } };
   class Window {
-    constructor() { window = this; this.webContents = { mainFrame: {}, session, setWindowOpenHandler() {}, on() {} }; }
-    getTitle() { return 'LectureLens'; } on() {} async loadFile() {}
+    constructor() { window = this; this.webContents = { mainFrame: {}, session, setWindowOpenHandler() {}, on() {}, send() {} }; }
+    getTitle() { return 'LectureLens'; } on(name, fn) { events[name] = fn; } async loadFile() {}
+    close() { closeRequests++; events.close({ preventDefault() { prevented++; } }); }
+    isDestroyed() { return false; }
   }
   const electron = { app: { setName() {}, requestSingleInstanceLock: () => true, on() {}, whenReady: () => Promise.resolve(), exit() { assert.fail('Unexpected app exit'); } },
     BrowserWindow: Window, desktopCapturer: { async getSources(options) { assert.deepEqual([...options.types], ['window']); return windows; } },
-    ipcMain: { handle(name, fn) { handler = fn; } }, dialog: {} };
+    ipcMain: { handle(name, fn) { handler = fn; } }, dialog: { showMessageBoxSync() { stopPrompts++; return decision; } } };
   vm.runInNewContext(await readFile('src/desktop-capture/main.cjs', 'utf8'), {
-    require: name => name === 'electron' ? electron : name === './host.cjs' ? { StorageHost: class {} } : createRequire(import.meta.url)(name),
-    __dirname: resolve('src/desktop-capture'), process: { argv: [], env: {} }, console,
+    require: name => name === 'electron' ? electron : name === './host.cjs' ? { StorageHost: class { async call() { return {}; } } } : createRequire(import.meta.url)(name),
+    __dirname: resolve('src/desktop-capture'), process: { argv: [], env: {} }, console, setImmediate,
   });
   await settle();
   const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame };
   await assert.rejects(handler({ sender: {} }, 'list'), /Untrusted/);
+  await assert.rejects(handler({ sender: {} }, 'close'), /Untrusted/);
   await assert.rejects(handler(event, 'create', { consent: true }), /Preview/);
   await assert.rejects(handler(event, 'select', { id: 'window:42', consent: false }), /consent/);
   await assert.rejects(handler(event, 'select', { id: 'screen:0', consent: true }), /available/);
@@ -43,10 +47,21 @@ test('desktop permission boundary: trusted main frame, explicit selection, one-u
   await grant(request, value => { result = value; }); assert.equal(result.video.id, 'window:42'); assert.equal(result.audio, 'loopback');
   await grant(request, value => { result = value; }); assert.equal(result, null, 'grant is one-use');
   await assert.rejects(handler(event, 'select', { id: 'window:42', consent: true }), /Stop/);
+  await handler(event, 'close'); assert.equal(prevented, 0, 'idle Back/Escape can close immediately');
+  await handler(event, 'create', { consent: true });
+  await handler(event, 'close');
+  assert.equal(prevented, 1, 'Back/Escape during recording must keep the existing close guard');
+  assert.equal(stopPrompts, 1, 'recording close must ask whether to keep recording or stop and save');
+  decision = 1; await handler(event, 'close');
+  const beforeSave = closeRequests;
+  await settle(); assert.equal(closeRequests, beforeSave, 'stop-and-save must not close before storage finishes');
+  await handler(event, 'finish', { id: 'synthetic' }); await settle();
+  assert.equal(closeRequests, beforeSave + 1, 'successful save must finish the original Back/Escape request');
 });
 
-function harness({ audio = true, storageFails = false } = {}) {
+function harness({ audio = true, storageFails = false, embedded = false } = {}) {
   const elements = new Map(), calls = [], intervals = new Set(); let signal = 0, time = 1000, source = 'same', stopRequested = false;
+  const listeners = {}, appearance = { dataset: {}, style: {} }, classes = new Set();
   function element(id) {
     if (!elements.has(id)) elements.set(id, { id, checked: id === 'full', value: '', disabled: false, style: {}, textContent: '',
       replaceChildren(...items) { this.value = items[0]?.value ?? ''; }, setPointerCapture() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 320, height: 180 }),
@@ -77,7 +92,9 @@ function harness({ audio = true, storageFails = false } = {}) {
     if (op === 'append') { await settle(); if (storageFails) throw new Error('Synthetic disk failure'); }
     return true;
   } };
-  vm.runInNewContext(code, { window: { captureBridge: bridge }, document: { getElementById: element, querySelector: selector => selector === 'video' ? video : element(selector), createElement: () => element('sample') },
+  vm.runInNewContext(code, { window: { captureBridge: bridge }, document: { documentElement: appearance, body: { classList: { add: value => classes.add(value) } },
+    addEventListener: (name, fn) => listeners[name] = fn, getElementById: element, querySelector: selector => selector === 'video' ? video : element(selector), createElement: () => element('sample') },
+    location: embedded ? { search: '?embedded=1&theme=light&font=Segoe%20UI' } : undefined, URLSearchParams,
     ResizeObserver: class { observe() {} }, Option: class { constructor(name, value) { this.value = value; } },
     navigator: { mediaDevices: { getDisplayMedia: async () => stream } }, AudioContext: Audio, MediaRecorder: Recorder,
     MediaStream: class { constructor(tracks) { this.tracks = tracks; } getTracks() { return this.tracks; } getAudioTracks() { return this.tracks; } getVideoTracks() { return []; } },
@@ -85,10 +102,20 @@ function harness({ audio = true, storageFails = false } = {}) {
     setInterval: fn => { intervals.add(fn); return fn; }, clearInterval: fn => intervals.delete(fn),
     btoa: value => Buffer.from(value, 'binary').toString('base64'), console,
   });
-  return { calls, tracks, element, async click(id) { element(id).onclick(); await settle(); },
+  return { calls, tracks, element, appearance, classes, escape() { listeners.keydown({ key: 'Escape', preventDefault() {} }); }, async click(id) { element(id).onclick(); await settle(); },
     async tick(count = 1) { for (let i = 0; i < count; i++) { time += 100; for (const fn of intervals) fn(); await settle(); } },
     sound(value) { signal = value; }, source(value) { source = value; }, stopRequested() { stopRequested = true; } };
 }
+
+test('embedded capture inherits appearance and Escape requests guarded navigation without starting capture', async () => {
+  const h = harness({ embedded: true }); await settle();
+  assert.equal(h.appearance.dataset.theme, 'light');
+  assert.equal(h.appearance.style.fontFamily, 'Segoe UI');
+  assert.equal(h.classes.has('embedded'), true);
+  h.escape(); await settle();
+  assert.equal(h.calls.filter(call => call.op === 'close').length, 1);
+  assert.equal(h.calls.some(call => call.op === 'create' || call.op === 'select'), false);
+});
 
 test('desktop preview needs consent and sound; pause and stop drain durable audio before finish', async () => {
   const h = harness(); await settle();

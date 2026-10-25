@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace LectureLens.Desktop;
@@ -18,23 +17,24 @@ internal sealed class StudyCompanion
     readonly Stopwatch elapsed = new();
     Window? window;
     bool attached;
-    long selectionTouch;
+    readonly Func<double> nextChance;
     internal CompanionPose Pose => drawing.Pose;
     internal bool Running => timer.IsEnabled;
 
-    internal static StudyCompanion? Attach(FrameworkElement root)
+    internal static StudyCompanion? Attach(FrameworkElement root, Func<double>? nextChance = null)
     {
         if (root.FindName("CompanionButton") is not Button button) return null;
         if (button.Tag is StudyCompanion existing) return existing;
-        var companion = new StudyCompanion(root, button);
+        var companion = new StudyCompanion(root, button, nextChance ?? Random.Shared.NextDouble);
         button.Tag = companion;
         return companion;
     }
 
-    StudyCompanion(FrameworkElement root, Button button)
+    StudyCompanion(FrameworkElement root, Button button, Func<double> nextChance)
     {
         this.root = root;
         this.button = button;
+        this.nextChance = nextChance;
         ((ContentControl)root.FindName("CompanionArt")).Content = drawing;
         button.Loaded += Load;
         button.Unloaded += Unload;
@@ -49,11 +49,8 @@ internal sealed class StudyCompanion
         attached = true;
         window = Window.GetWindow(button);
         root.PreviewMouseMove += Follow;
-        root.PreviewMouseDown += Touch;
         root.MouseLeave += Leave;
-        root.PreviewKeyDown += Key;
         root.AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler(Click), true);
-        root.AddHandler(Selector.SelectionChangedEvent, new SelectionChangedEventHandler(Selection), true);
         SystemParameters.StaticPropertyChanged += PreferencesChanged;
         if (window != null)
         {
@@ -70,11 +67,8 @@ internal sealed class StudyCompanion
         timer.Stop();
         elapsed.Reset();
         root.PreviewMouseMove -= Follow;
-        root.PreviewMouseDown -= Touch;
         root.MouseLeave -= Leave;
-        root.PreviewKeyDown -= Key;
         root.RemoveHandler(ButtonBase.ClickEvent, new RoutedEventHandler(Click));
-        root.RemoveHandler(Selector.SelectionChangedEvent, new SelectionChangedEventHandler(Selection));
         SystemParameters.StaticPropertyChanged -= PreferencesChanged;
         if (window != null)
         {
@@ -92,42 +86,13 @@ internal sealed class StudyCompanion
         Pose.Look(CompanionPose.TrackAxis(point.X, center.X, root.ActualWidth),
             CompanionPose.TrackAxis(point.Y, center.Y, root.ActualHeight));
     }
-    void Touch(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton != MouseButton.Left) return;
-        // Button/selection activation has its own routed event, including keyboard use.
-        // React to other workspace clicks without consuming them or double-triggering.
-        for (var node = e.OriginalSource as DependencyObject; node != null;)
-        {
-            if (node is ButtonBase || node is FrameworkElement { Name: "TitleBar" }) return;
-            if (node is Selector)
-            {
-                selectionTouch = Stopwatch.GetTimestamp();
-                Pose.React(quiet: true);
-                return;
-            }
-            node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node);
-        }
-        Pose.React();
-    }
     void Leave(object sender, MouseEventArgs e) => Pose.Look(0, 0);
-    void Key(object sender, KeyEventArgs e)
-    {
-        // React to activity, never read or retain the user's text.
-        if (!e.IsRepeat && e.Key is not (System.Windows.Input.Key.Tab or System.Windows.Input.Key.LeftShift or System.Windows.Input.Key.RightShift))
-            Pose.NoticeTyping();
-    }
     void Click(object sender, RoutedEventArgs e)
     {
         if (e.OriginalSource is not ButtonBase source || !source.IsEnabled) return;
         if (source.Name is "CloseWindow" or "MinimizeWindow" or "MaximizeWindow") return;
+        if (Pose.Move != CompanionMove.None || nextChance() >= .7) return;
         Pose.React(personal: ReferenceEquals(source, button), quiet: source.Name is "Delete" or "Stop" or "CancelGeneration");
-    }
-    void Selection(object sender, SelectionChangedEventArgs e)
-    {
-        if (selectionTouch != 0 && Stopwatch.GetElapsedTime(selectionTouch).TotalMilliseconds < 150) return;
-        if (e.OriginalSource is FrameworkElement element && element.Name is "Sessions" or "TeacherLanguage" or "PdfLanguage" or "Detail")
-            Pose.React(quiet: true);
     }
     void PreferencesChanged(object? sender, PropertyChangedEventArgs e) => button.Dispatcher.InvokeAsync(UpdateTimer);
     void VisibilityChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdateTimer();

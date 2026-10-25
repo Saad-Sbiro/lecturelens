@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
   <ItemGroup>
+    <Resource Include="../../src/assets/logomark.png" Link="assets/logomark.png" />
     <ProjectReference Include="../../src/native/Storage/Storage.csproj" />
     <Compile Include="../../src/native/Desktop/TermsNotice.cs" Link="TermsNotice.cs" />
     <Compile Include="../../src/native/Desktop/InAppDialog.cs" Link="InAppDialog.cs" />

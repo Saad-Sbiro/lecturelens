@@ -1,6 +1,6 @@
 # LectureLens Terms of Service
 
-Version: 2026-10-24
+Version: 2026-10-25
 
 Welcome to LectureLens. Please read these terms before your first lesson. Your acceptance is saved on this device and shared by the desktop app and extension.
 
@@ -10,15 +10,15 @@ Use LectureLens only for lessons you are allowed to record and process. Obtain p
 
 ## 2. What is captured
 
-The extension captures the lesson tab you select. Slides + voice records its audio and saves selected slide images. Voice only requests audio without screen capture or screenshots. Keep the selected tab on the intended lesson. Preview checks the source; recording begins when you choose Start recording.
+Browser capture records the selected lesson tab’s audio and, in Slides + voice, selected slide images. Browser Voice only requests audio without video. Windows desktop capture (experimental) previews the app window you select and records ALL computer sound, including other apps and notifications; your microphone is not included. Desktop Slides mode saves selected images from that window; Audio only saves no slide images. Keep the selected source on the intended lesson. Preview checks the source; recording begins when you choose Start recording. Minimized, protected or closed windows may stop updating.
 
 ## 3. Local files and retention
 
 Recordings are saved incrementally on this computer to support recovery. Anyone with access to your computer or exported files may be able to read them. This preview currently keeps original recordings and lesson files by default, including after PDF export. Delete recordings you no longer need using the app, and manage exported copies separately. Automatic deletion after PDF export is not yet available in this build.
 
-## 4. Optional cloud processing
+## 4. Optional AI processing
 
-General acceptance does not authorize image uploads. Automatic crop is optional and requires a separate choice for each session. If enabled, occasional full-tab screenshots, including content outside the final crop, are sent to Google Gemini. Google’s unpaid service may use submitted content and responses to improve its products, and human reviewers may inspect them. Do not upload sensitive or confidential content. Manual crop and voice-only capture do not need this image service. Cloud transcription and note generation send the relevant audio or text to the configured providers when you choose those features; review their notices and terms before use.
+When you choose AI transcription or note generation, lesson audio or transcript text is sent to an external model provider for processing. Automatic crop requires a separate choice for each browser session before occasional full-tab images are sent to the image provider; these can include content outside the final crop. The free image service may use submissions to improve its products and allow human review. Do not upload sensitive or confidential material. Manual crop and voice-only capture do not require this image service. General terms acceptance does not authorize image uploads. Review the selected providers’ notices and terms before using their features.
 
 ## 5. Study responsibly
 

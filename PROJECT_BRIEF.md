@@ -25,7 +25,7 @@ LectureLens is an **installable desktop app** (a mobile app comes later). While 
 Students in online classes cannot listen, understand and take notes at the same time. Full recordings are long and rarely re-watched. Slides are shown on screen but often not shared afterwards.
 
 ### 1.2 What it does
-One start, one end, one PDF. While the class runs, the app watches the shared content and the audio. At the end it outputs notes organized by slide: a screenshot, then short simple explanations of what the teacher said about it, followed by announcements, a glossary and optional review questions.
+One start, one end, one PDF. While the class runs, the app watches the shared content and the audio. At the end it outputs lesson chapters with connected explanations, relevant captured slides and source-grounded diagrams. Owner update (2026-10-25): the PDF contains the lesson only, not a meeting recap, audience questions, announcements or everything the teacher says.
 
 ### 1.3 Users
 - **Primary:** a student who attends classes in a browser and runs the app on their own computer.
@@ -80,7 +80,7 @@ The default path is zero-interaction after End. Review is optional and happens a
 | Detail level | brief / standard / detailed | standard |
 | Style | very simple / standard / academic | very simple |
 | Screenshots | include yes/no, max per hour | yes, cap in config |
-| Extra sections | key takeaways, announcements and homework, glossary, review questions | takeaways, announcements and glossary on |
+| Extra sections | key takeaways, glossary, review questions | takeaways and glossary on; no meeting logistics |
 | Privacy mode | on-device only / allow online services | depends on profile |
 | Quality profile | free / standard / premium (§7.1) | free |
 | Course profile | save preferences and crop region under a name | none |
@@ -157,18 +157,19 @@ If no slides are ever detected (a pure talk), the app still produces notes, orga
 - Write in the PDF language, with short sentences. Define jargon at first use.
 - Keep formulas, code, numbers, names, dates and definitions exactly as given.
 - Do not invent. Ground everything in the slide or the transcript. If they conflict, prefer the slide for facts and note the teacher's remark. Mark unclear audio instead of guessing.
-- Skip small talk, jokes and technical issues ("can you hear me?").
+- Exclude audience questions, participant conjecture, small talk, jokes, unrelated teacher remarks and technical issues. An answer that explains a lesson concept may be integrated as an explanation without the conversational exchange. Do not infer speaker identity from punctuation.
 - Highlight what the teacher stresses (for example "this will be in the exam").
-- Collect announcements, homework and deadlines into their own section.
+- Omit announcements, homework logistics and deadlines from the lesson PDF (owner update, 2026-10-25). Log keep/mixed/exclude decisions for every source; mixed sources support only their educational clauses.
 
 **Stages:** per-visit notes (slide content plus aligned transcript), then merge multiple visits of one slide, then the overview and key takeaways, then the glossary, then optional review questions with answers.
-**Detail levels:** brief is about 3 bullets per slide, standard is 3–6, detailed is 6–10 with examples.
+**Detail levels:** brief is one compact paragraph per topic; standard is one to three; detailed is up to five with examples present in the source. At most three optional takeaway bullets supplement the paragraphs. Never pad thin material.
+**Visuals:** source-grounded sequences, concept groups and comparisons where they explain a stated relationship. Keep all visual labels traceable to their section's retained sources. Never invent screenshots, ordering, causality or numerical charts. Render locally with selectable text; diagrams are independent of the captured-slide preference.
 **Structured output:** notes are produced as validated structured data, not free text, and the renderer builds the PDF from it.
 **Long sessions:** process in independent units (map then reduce). Never exceed a model's limits. Persist intermediate results.
 **Cost discipline:** send images to a model only when text extraction is not enough. Cache every provider result by content hash. Batch small units.
 
 ### 4.7 PDF output
-- **Sections:** cover (title, date, duration, language), overview, key takeaways, per-slide pages (screenshot plus notes), announcements and homework, glossary, review questions (optional), page numbers.
+- **Sections:** cover (title, date, duration, language), lesson overview, topic explanations with relevant captured slides and grounded diagrams, optional takeaways/glossary/review questions, page numbers. Exclude announcements and meeting logistics.
 - **Technical:** A4 or Letter. Correct direction per language, including mixed left-to-right and right-to-left text in one paragraph. Embedded fonts covering every enabled language. Images never split across pages. Selectable text and an outline or bookmarks. Compressed images, with a target size of about 20 MB or less for a 2-hour class. Right-to-left shaping is a known weak spot of many PDF tools ⚠, so verify it with real mixed text in Phase 0.
 - **File name:** date plus course name. Also export Markdown (with an images folder).
 

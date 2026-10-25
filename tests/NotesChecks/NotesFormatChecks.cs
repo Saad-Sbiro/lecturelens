@@ -11,7 +11,7 @@ internal static class NotesFormatChecks
  {
   var sources = new[] { new NoteSource("S1", "00:00:00", "Fixture source.") };
   var prefs = new NotesPreferences("standard", "fr", false);
-  var valid = JsonSerializer.Serialize(new StudyNotes("Fixture", "Overview", new[] { new NoteSection("Topic", new[] { "A fact." }, new[] { "S1" }) }));
+  var valid = JsonSerializer.Serialize(new StudyNotes("Fixture", "Overview", new[] { new NoteSection("Topic", [], ["S1"], ["A fact explained in context."]) }, [new("S1","keep","Educational explanation")]));
   const string malformed = "{\"title\":\"Fixture\",\"overview\":\"Overview\",\"sections\":[{\"title\":\"Topic\",\"bullets\":[\"a\":\"b\"],\"sourceIds\":[\"S1\"]}]}";
   var handler = new Replies(malformed, valid);
   using var http = new HttpClient(handler);
