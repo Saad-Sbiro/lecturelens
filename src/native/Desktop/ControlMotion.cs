@@ -31,10 +31,8 @@ internal static class ControlMotion
                 grid.LoadingRow += (_, e) => Attach(e.Row);
                 break;
             case Button button when button.Name is not ("CloseWindow" or "MaximizeWindow" or "MinimizeWindow" or "Stop" or "CancelGeneration"):
-                button.MouseEnter += (_, _) => { if (button.IsEnabled && Motion.Enabled) SpatialMotion.To(button, y: -2, duration: 180); };
-                button.MouseLeave += (_, _) => SpatialMotion.To(button);
                 button.PreviewMouseLeftButtonDown += (_, _) => { if (button.IsEnabled && Motion.Enabled) SpatialMotion.To(button, .96, duration: 80); };
-                button.PreviewMouseLeftButtonUp += (_, _) => SpatialMotion.To(button, y: button.IsMouseOver && Motion.Enabled ? -2 : 0);
+                button.PreviewMouseLeftButtonUp += (_, _) => SpatialMotion.To(button);
                 button.PreviewKeyDown += (_, e) => { if (e.Key == Key.Space && Motion.Enabled) SpatialMotion.To(button, .96, duration: 80); };
                 button.PreviewKeyUp += (_, e) => { if (e.Key == Key.Space) SpatialMotion.To(button); };
                 button.LostMouseCapture += (_, _) => SpatialMotion.To(button);

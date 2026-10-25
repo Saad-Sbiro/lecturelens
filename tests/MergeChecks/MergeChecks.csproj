@@ -1,9 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
- <PropertyGroup><TargetFramework>net10.0-windows</TargetFramework><OutputType>Exe</OutputType><UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors><AssemblyName>LectureLens.MergeChecks</AssemblyName></PropertyGroup>
+ <PropertyGroup><TargetFramework>net10.0-windows</TargetFramework><OutputType>Exe</OutputType><UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors><AssemblyName>LectureLens.MergeChecks</AssemblyName></PropertyGroup>
  <ItemGroup>
+  <Using Remove="System.Drawing"/><Using Remove="System.Windows.Forms"/>
   <ProjectReference Include="../../src/native/Storage/Storage.csproj"/>
   <Compile Include="../../src/native/Desktop/Adapters/*.cs" Link="Adapters/%(Filename)%(Extension)"/>
   <Compile Include="../../src/native/Desktop/InAppDialog.cs" Link="InAppDialog.cs"/>
+  <Compile Include="../../src/native/Desktop/DesktopCapture.cs" Link="DesktopCapture.cs"/>
+  <Compile Include="../../src/native/Desktop/TermsNotice.cs" Link="TermsNotice.cs"/>
+  <Compile Include="../../src/native/Desktop/Motion.cs" Link="Motion.cs"/>
+  <Compile Include="../../src/native/Desktop/SpatialMotion.cs" Link="SpatialMotion.cs"/>
+  <Compile Include="../../src/native/Desktop/ControlMotion.cs" Link="ControlMotion.cs"/>
+  <Compile Include="../../src/native/Desktop/SmoothScroll.cs" Link="SmoothScroll.cs"/>
+  <Compile Include="../../src/native/Desktop/WorkspaceMotion.cs" Link="WorkspaceMotion.cs"/>
   <Compile Include="../../src/native/Desktop/SessionPanel.cs" Link="SessionPanel.cs"/>
   <Compile Include="../../src/native/Desktop/NotesStudio.cs" Link="NotesStudio.cs"/>
   <Compile Include="../../src/native/Desktop/LessonTranscript.cs" Link="LessonTranscript.cs"/>

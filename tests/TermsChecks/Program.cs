@@ -19,6 +19,7 @@ internal static class Program
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             if (args.Contains("--gallery")) { MotionGallery.Run(app); return; }
             MotionChecks.Run();
+            CompanionChecks.Run();
             app.Resources["PanelBackground"] = new SolidColorBrush(Color.FromRgb(32, 35, 43));
             app.Resources["Danger"] = Brushes.Salmon;
             app.Resources["AppForeground"] = Brushes.White;

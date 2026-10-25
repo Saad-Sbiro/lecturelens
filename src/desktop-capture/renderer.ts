@@ -9,6 +9,7 @@ declare global {
   interface Window { captureBridge: { call<T = any>(op: string, data?: Record<string, unknown>): Promise<T>; onStop(callback: () => void): void } }
 }
 const bridge = window.captureBridge;
+if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('embedded')) document.body.classList.add('embedded');
 const button = (id: string) => document.getElementById(id) as HTMLButtonElement;
 const input = (id: string) => document.getElementById(id) as HTMLInputElement;
 const text = (id: string, value: string) => { document.getElementById(id)!.textContent = value; };

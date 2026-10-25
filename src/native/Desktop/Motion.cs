@@ -17,9 +17,7 @@ internal static class Motion
         SystemParameters.StaticPropertyChanged += (_, _) => {
             if (!Enabled) Application.Current?.Dispatcher.InvokeAsync(ControlMotion.ReduceMotion);
         };
-        // Class handlers also cover buttons created later in dialogs, without per-view subscriptions.
-        EventManager.RegisterClassHandler(typeof(Button), Mouse.MouseEnterEvent, new MouseEventHandler((sender, _) => Hover((Button)sender, true)));
-        EventManager.RegisterClassHandler(typeof(Button), Mouse.MouseLeaveEvent, new MouseEventHandler((sender, _) => Hover((Button)sender, false)));
+        // Press feedback stays responsive; hover styling is immediate and does not animate.
         EventManager.RegisterClassHandler(typeof(Button), UIElement.PreviewMouseDownEvent, new MouseButtonEventHandler((sender, _) => ClearSurface((Button)sender)));
         EventManager.RegisterClassHandler(typeof(Button), UIElement.PreviewKeyDownEvent, new KeyEventHandler((sender, e) => { if (e.Key is Key.Space or Key.Enter) ClearSurface((Button)sender); }));
         EventManager.RegisterClassHandler(typeof(Button), FrameworkElement.UnloadedEvent, new RoutedEventHandler((sender, _) => ClearSurface((Button)sender)));
@@ -27,15 +25,6 @@ internal static class Motion
 
     static FrameworkElement? Surface(Button button) => button.Template?.FindName("Surface", button) as FrameworkElement;
     static void ClearSurface(Button button) { Surface(button)?.BeginAnimation(UIElement.OpacityProperty, null); }
-    static void Hover(Button button, bool over)
-    {
-        var surface = Surface(button);
-        if (surface == null || !button.IsEnabled || button.IsPressed) return;
-        // Preserve the existing template's exact hover/resting opacity and focus border.
-        var from = surface.HasAnimatedProperties ? surface.Opacity : over ? 1 : .8;
-        Fade(surface, from, over ? .8 : 1, 110, Enabled);
-    }
-
     internal static void Enter(UIElement element)
     {
         if (element is FrameworkElement view) SpatialMotion.Reveal(view);

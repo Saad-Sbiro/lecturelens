@@ -20,6 +20,12 @@ internal static class UiChecks
         var xaml = File.ReadAllText("src/native/Desktop/MainWindow.xaml").Replace("LectureLens;component", "LectureLens.MergeChecks;component");
         var view = (FrameworkElement)XamlReader.Parse(xaml);
         var owner = new Window { Content = view, Width = 1280, Height = 900 }; owner.Show();
+        var detail = (ComboBox)view.FindName("Detail"); detail.ApplyTemplate();
+        var popup = (System.Windows.Controls.Primitives.Popup)detail.Template.FindName("PART_Popup", detail);
+        if (popup.VerticalOffset < 8) throw new Exception("Option menu still covers its combo box.");
+        var captureButton = (Button)view.FindName("DesktopCapture");
+        if (captureButton.FontSize < 13 || captureButton.Padding.Top < 15) throw new Exception("Desktop capture action is not prominent enough.");
+        Console.WriteLine("PASS option menus clear their controls and desktop capture is prominent");
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         Exception? failure = null;
         var mergeFrame = new DispatcherFrame();

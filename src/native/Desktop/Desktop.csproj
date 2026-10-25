@@ -1,10 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms><OutputType>WinExe</OutputType>
     <AssemblyName>LectureLens</AssemblyName><StartupObject>LectureLens.Desktop.Program</StartupObject>
     <ApplicationIcon>../../assets/logomark.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
     <ProjectReference Include="../Storage/Storage.csproj" />
     <Page Remove="MainWindow.xaml" />
     <Resource Include="../../assets/logomark.png" Link="assets/logomark.png" />

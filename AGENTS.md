@@ -38,7 +38,7 @@ Never claim something works unless you ran it. State what was verified, what was
 - replay a fixture: `npm run replay -- fixtures/synthetic-session.json`
 - golden-set eval: `npm run eval` (readiness only until labelled fixtures exist)
 - native preview: `npm run package:native` → `release/native-win-x64/LectureLens.exe`; check: `npm run smoke:native`
-- desktop capture: `npm run test:capture`; `npm run typecheck:capture`; `npm run smoke:capture`; owner checks: `docs/desktop-capture-checklist.md`
+- desktop capture: `npm run test:capture`; `npm run test:capture-ui`; `npm run typecheck:capture`; `npm run smoke:capture`; owner checks: `docs/desktop-capture-checklist.md`
 - browser spike: `npm run dev` prepares extension/host; load `dist/extension` once in Chrome. Checks: `npm run test:native`, `npm run test:extension`, `npm run typecheck:extension`.
 - legacy Electron installer: `npm run package`; disk crash spike: `npm run test:durability`
 

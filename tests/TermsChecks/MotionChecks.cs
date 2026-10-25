@@ -49,7 +49,7 @@ internal static class MotionChecks
         ControlMotion.AttachTree(button);
         button.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
         Advance(40);
-        if (Motion.Enabled) Check(button.RenderTransform.Value.OffsetY < 0, "Hover must visibly lift the button.");
+        Check(button.RenderTransform.Value.IsIdentity && !face.HasAnimatedProperties, "Hover must not animate the button.");
         button.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent });
         Advance(40);
         if (Motion.Enabled) Check(button.RenderTransform.Value.M22 < 1, "Press must visibly compress the button.");
@@ -71,6 +71,6 @@ internal static class MotionChecks
         SmoothScroll.Cancel(scroll); Advance();
         Check(Math.Abs(scroll.VerticalOffset - beforeCancel) < 1, "Cancelling scroll must preserve its current position.");
         } finally { host.Close(); }
-        Console.WriteLine("PASS: visible dialog scale, button lift/press, smooth scroll, reduced motion, rapid replacement and cleanup.");
+        Console.WriteLine("PASS: visible dialog scale, static button hover, button press, smooth scroll, reduced motion and cleanup.");
     }
 }

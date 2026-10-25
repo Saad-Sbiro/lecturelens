@@ -4,12 +4,15 @@ const { StorageHost } = require('./host.cjs');
 
 app.setName('LectureLens Desktop Capture');
 let window, host, selected, granted, recording = false, allowClose = false;
+const captureTitle = 'LectureLens · Desktop capture';
 const smoke = process.argv.includes('--smoke');
+const embedded = process.argv.includes('--embedded');
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (window) { window.restore(); window.focus(); } });
   app.whenReady().then(async () => {
-    window = new BrowserWindow({ width: 1000, height: 850, minWidth: 750, minHeight: 650, title: 'LectureLens · Desktop capture', backgroundColor: '#15171b',
+    window = new BrowserWindow({ width: 1000, height: 760, minWidth: 750, minHeight: 520, title: captureTitle, backgroundColor: '#15171b',
+      ...(embedded ? { x: -32000, y: -32000, frame: false, skipTaskbar: true } : {}),
       webPreferences: { preload: join(__dirname, 'preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
     const trusted = event => event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame;
     const sources = () => desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 0, height: 0 } });
@@ -30,7 +33,7 @@ else {
     window.webContents.on('will-navigate', event => event.preventDefault());
     ipcMain.handle('capture', async (event, op, data = {}) => {
       if (!trusted(event)) throw new Error('Untrusted capture request');
-      if (op === 'list') return (await sources()).filter(item => item.name !== window.getTitle()).map(({ id, name }) => ({ id, name }));
+      if (op === 'list') return (await sources()).filter(item => item.name !== captureTitle).map(({ id, name }) => ({ id, name }));
       if (op === 'select') {
         if (recording || granted || data.consent !== true) throw new Error('Stop the preview first and confirm recording consent');
         if (!(await sources()).some(item => item.id === data.id)) throw new Error('Window is no longer available');
@@ -60,8 +63,11 @@ else {
     });
     window.webContents.on('render-process-gone', () => { host?.close(); recording = false; });
     window.on('closed', () => { host?.close(); app.quit(); });
-    await window.loadFile(join(__dirname, 'index.html'));
+    await window.loadFile(join(__dirname, 'index.html'), embedded ? { query: { embedded: '1' } } : {});
     if (smoke) {
+      // The renderer enumerates windows on load; let that desktopCapturer request
+      // finish before asking Viz for the smoke screenshot.
+      await new Promise(resolve => setTimeout(resolve, 500));
       const ok = await window.webContents.executeJavaScript("Boolean(document.querySelector('#preview') && document.querySelector('#start') && window.captureBridge)");
       const { mkdirSync, writeFileSync } = require('node:fs');
       mkdirSync('artifacts', { recursive: true });
